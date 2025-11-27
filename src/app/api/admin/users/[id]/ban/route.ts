@@ -1,0 +1,170 @@
+import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/db"
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Não autorizado" },
+        { status: 401 }
+      )
+    }
+
+    // Check if user is admin
+    const admin = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    })
+
+    if (!admin || (admin.role !== "ADMIN" && admin.role !== "SUPER_ADMIN")) {
+      return NextResponse.json(
+        { error: "Acesso negado" },
+        { status: 403 }
+      )
+    }
+
+    const { reason } = await request.json()
+
+    // Validate inputs
+    if (!reason || reason.trim().length < 10) {
+      return NextResponse.json(
+        { error: "Motivo do banimento é obrigatório (mínimo 10 caracteres)" },
+        { status: 400 }
+      )
+    }
+
+    // Check if target user exists
+    const targetUser = await prisma.user.findUnique({
+      where: { id: params.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true
+      },
+    })
+
+    if (!targetUser) {
+      return NextResponse.json(
+        { error: "Usuário não encontrado" },
+        { status: 404 }
+      )
+    }
+
+    // Cannot ban admins or super admins
+    if (targetUser.role === "ADMIN" || targetUser.role === "SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "Não é possível banir administradores" },
+        { status: 403 }
+      )
+    }
+
+    // Cannot ban yourself
+    if (targetUser.id === session.user.id) {
+      return NextResponse.json(
+        { error: "Não é possível banir a si mesmo" },
+        { status: 400 }
+      )
+    }
+
+    // Update user status to banned
+    await prisma.user.update({
+      where: { id: params.id },
+      data: {
+        status: "BANNED",
+        updatedAt: new Date(),
+      },
+    })
+
+    // Delete all user's content
+    await Promise.all([
+      prisma.post.deleteMany({
+        where: { authorId: params.id },
+      }),
+      prisma.comment.deleteMany({
+        where: { authorId: params.id },
+      }),
+      prisma.vote.deleteMany({
+        where: { userId: params.id },
+      }),
+    ])
+
+    // Reset user's points (gamification penalty)
+    await prisma.patientProfile.update({
+      where: { userId: params.id },
+      data: { points: 0 },
+    })
+
+    // TODO: Log the ban action for audit trail
+    // This could be stored in a separate moderation log table
+
+    return NextResponse.json({
+      message: `Usuário ${targetUser.name || targetUser.email} foi banido com sucesso`,
+      data: {
+        userId: params.id,
+        reason,
+        bannedAt: new Date(),
+      },
+    })
+  } catch (error) {
+    console.error("Error banning user:", error)
+    return NextResponse.json(
+      { error: "Erro interno do servidor" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Não autorizado" },
+        { status: 401 }
+      )
+    }
+
+    // Check if user is admin
+    const admin = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    })
+
+    if (!admin || (admin.role !== "ADMIN" && admin.role !== "SUPER_ADMIN")) {
+      return NextResponse.json(
+        { error: "Acesso negado" },
+        { status: 403 }
+      )
+    }
+
+    // Unban user
+    await prisma.user.update({
+      where: { id: params.id },
+      data: {
+        status: "ACTIVE",
+        updatedAt: new Date(),
+      },
+    })
+
+    return NextResponse.json({
+      message: "Usuário desbanido com sucesso",
+    })
+  } catch (error) {
+    console.error("Error unbanning user:", error)
+    return NextResponse.json(
+      { error: "Erro interno do servidor" },
+      { status: 500 }
+    )
+  }
+}

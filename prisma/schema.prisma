@@ -1,0 +1,660 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          Role      @default(PATIENT)
+  status        UserStatus @default(ACTIVE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+
+  // Profile relations
+  profile       UserProfile?
+  therapistProfile TherapistProfile?
+  patientProfile   PatientProfile?
+  preferences   UserPreferences?
+
+  // Health & safety
+  emergencyContacts EmergencyContact[]
+  moodLogs      UserMoodLog[]
+
+  // Goals & achievements
+  goals         UserGoal[]
+
+  // Sessions
+  sessionParticipants SessionParticipant[]
+  sessionChatMessages  SessionChatMessage[]
+
+  // Community
+  posts       Post[]
+  comments    Comment[]
+  votes       Vote[]
+  reports     Report[]
+
+  // Gamification
+  badges         UserBadge[]
+  pointTransactions PointTransaction[]
+  dailyCheckIns  DailyCheckIn[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  THERAPIST
+  PATIENT
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+  BANNED
+}
+
+model UserProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bio       String?
+  avatar    String?
+  phone     String?
+  birthDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TherapistProfile {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  crp            String    @unique
+  specialties    String[]
+  bio            String    @db.Text
+  education      String?
+  experience     String?
+
+  documentUrl    String?
+  photoUrl       String?
+
+  isVerified     Boolean   @default(false)
+  verifiedAt     DateTime?
+  verifiedBy     String?
+  rejectionReason String?
+
+  hourlyRate     Decimal?  @db.Decimal(10, 2)
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Sessions
+  groupSessions  GroupSession[]
+}
+
+model PatientProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  points         Int      @default(0)
+  level          Int      @default(1)
+  streak         Int      @default(0)
+  longestStreak  Int      @default(0)
+  moodStreak     Int      @default(0)
+  exerciseStreak Int      @default(0)
+  lastActiveAt   DateTime?
+
+  preferredCategories String[]
+
+  // Wellness tracking
+  moodEntries     MoodEntry[]
+  journalEntries  JournalEntry[]
+  exerciseCompletions ExerciseCompletion[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Badge {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  slug          String    @unique
+  description   String
+  icon          String    // Emoji or URL
+  category      BadgeCategory
+  rarity        BadgeRarity @default(COMMON)
+  criteriaType  String    // "mood_entries", "sessions_attended", etc
+  criteriaValue Int
+  criteriaExtra String?   // JSON for extra criteria
+  pointsReward  Int       @default(0)
+  isActive      Boolean   @default(true)
+  isSecret      Boolean   @default(false)
+  users         UserBadge[]
+  createdAt     DateTime  @default(now())
+}
+
+model UserBadge {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId     String
+  badge       Badge     @relation(fields: [badgeId], references: [id])
+  unlockedAt  DateTime  @default(now())
+  @@unique([userId, badgeId])
+}
+
+model PointTransaction {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount        Int
+  type          PointType
+  description   String?
+  referenceId   String?
+  referenceType String?
+  createdAt     DateTime  @default(now())
+}
+
+model DailyCheckIn {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime  @db.Date
+  createdAt   DateTime  @default(now())
+  @@unique([userId, date])
+}
+
+enum BadgeCategory {
+  COMMUNITY
+  SESSIONS
+  WELLNESS
+  SOCIAL
+  MILESTONE
+  SPECIAL
+}
+
+enum BadgeRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+enum PointType {
+  DAILY_LOGIN
+  POST_CREATED
+  COMMENT_CREATED
+  UPVOTE_RECEIVED
+  SESSION_ATTENDED
+  MOOD_LOGGED
+  JOURNAL_WRITTEN
+  EXERCISE_COMPLETED
+  BADGE_UNLOCKED
+  STREAK_BONUS
+  ADMIN_BONUS
+  PENALTY
+}
+
+model EmergencyContact {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name      String
+  phone     String
+  email     String?
+  relation  String   // "parent", "spouse", "friend", etc.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model UserPreferences {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Notification preferences
+  emailNotifications    Boolean @default(true)
+  pushNotifications     Boolean @default(true)
+  sessionReminders      Boolean @default(true)
+  communityNotifications Boolean @default(true)
+
+  // Privacy settings
+  profileVisibility     String @default("private") // "public", "private", "therapists_only"
+  showMoodInCommunity   Boolean @default(false)
+
+  // App preferences
+  theme                 String @default("system") // "light", "dark", "system"
+  language              String @default("pt-BR")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserGoal {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  category    String   // "mental_health", "wellness", "social", "professional"
+  priority    String   @default("medium") // "low", "medium", "high"
+
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+  targetDate  DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model UserMoodLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  mood        Int      // 1-10 scale
+  note        String?
+  activities  String[] // ["exercise", "meditation", "social", "work"]
+
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model GroupSession {
+  id              String        @id @default(cuid())
+  title           String
+  description     String        @db.Text
+  category        SessionCategory
+
+  therapistId     String
+  therapist       TherapistProfile @relation(fields: [therapistId], references: [id])
+
+  scheduledAt     DateTime
+  duration        Int           // minutos
+  maxParticipants Int           @default(10)
+  status          SessionStatus @default(SCHEDULED)
+
+  roomName        String?       @unique
+  roomUrl         String?
+  coverImage      String?
+  tags            String[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  participants    SessionParticipant[]
+  chatMessages    SessionChatMessage[]
+  notes           SessionNote[]
+}
+
+model SessionParticipant {
+  id          String       @id @default(cuid())
+  sessionId   String
+  session     GroupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  status      ParticipantStatus @default(REGISTERED)
+  joinedAt    DateTime?
+  leftAt      DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@unique([sessionId, userId])
+}
+
+model SessionChatMessage {
+  id          String       @id @default(cuid())
+  sessionId   String
+  session     GroupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  content     String
+  isDeleted   Boolean      @default(false)
+  deletedBy   String?
+  createdAt   DateTime     @default(now())
+}
+
+model SessionNote {
+  id          String       @id @default(cuid())
+  sessionId   String
+  session     GroupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  therapistId String
+  content     String       @db.Text
+  isPrivate   Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum SessionCategory {
+  ANXIETY
+  DEPRESSION
+  GRIEF
+  TRAUMA
+  RELATIONSHIPS
+  SELF_ESTEEM
+  NEURODIVERGENCE
+  STRESS
+  ADDICTION
+  PARENTING
+  CAREER
+  GENERAL
+}
+
+enum SessionStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ParticipantStatus {
+  REGISTERED
+  CONFIRMED
+  ATTENDED
+  NO_SHOW
+  CANCELLED
+}
+
+model MoodEntry {
+  id          String    @id @default(cuid())
+  patientId   String
+  patient     PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  mood        Int       // 1-10
+  energy      Int?      // 1-10
+  anxiety     Int?      // 1-10
+  sleep       Int?      // 1-10
+  emotions    String[]
+  activities  String[]
+  notes       String?   @db.Text
+  date        DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+
+  @@unique([patientId, date])
+  @@index([patientId, date])
+}
+
+model JournalEntry {
+  id          String    @id @default(cuid())
+  patientId   String
+  patient     PatientProfile @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  title       String?
+  content     String    @db.Text
+  mood        Int?
+  promptId    String?
+  prompt      JournalPrompt? @relation(fields: [promptId], references: [id])
+  tags        String[]
+  isPrivate   Boolean   @default(true)
+  isFavorite  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([patientId, createdAt])
+  @@index([isPrivate])
+}
+
+model JournalPrompt {
+  id          String    @id @default(cuid())
+  text        String
+  category    PromptCategory
+  isActive    Boolean   @default(true)
+  entries     JournalEntry[]
+
+  @@index([category, isActive])
+}
+
+model MindfulnessExercise {
+  id          String    @id @default(cuid())
+  title       String
+  description String    @db.Text
+  category    ExerciseCategory
+  duration    Int       // minutos
+  difficulty  Difficulty @default(BEGINNER)
+  instructions String[]
+  audioUrl    String?
+  imageUrl    String?
+  benefits    String[]
+  isActive    Boolean   @default(true)
+  isFeatured  Boolean   @default(false)
+  completions ExerciseCompletion[]
+
+  @@index([category, isActive])
+  @@index([difficulty])
+  @@index([isFeatured])
+}
+
+model ExerciseCompletion {
+  id          String    @id @default(cuid())
+  patientId   String
+  patient     PatientProfile @relation(fields: [patientId], references: [id])
+  exerciseId  String
+  exercise    MindfulnessExercise @relation(fields: [exerciseId], references: [id])
+  duration    Int       // segundos
+  rating      Int?      // 1-5
+  notes       String?
+  completedAt DateTime  @default(now())
+
+  @@unique([patientId, exerciseId, completedAt])
+  @@index([patientId, completedAt])
+}
+
+enum PromptCategory {
+  GRATITUDE
+  REFLECTION
+  GOALS
+  EMOTIONS
+  RELATIONSHIPS
+  GROWTH
+  CHALLENGES
+  CREATIVITY
+}
+
+enum ExerciseCategory {
+  BREATHING
+  MEDITATION
+  BODY_SCAN
+  GROUNDING
+  VISUALIZATION
+  RELAXATION
+  MINDFUL_MOVEMENT
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model Post {
+  id          String       @id @default(cuid())
+  title       String
+  content     String       @db.Text
+  excerpt     String?
+  category    PostCategory
+  authorId    String
+  author      User         @relation(fields: [authorId], references: [id])
+  isAnonymous Boolean      @default(false)
+  isPinned    Boolean      @default(false)
+  isLocked    Boolean      @default(false)
+  viewCount   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  comments    Comment[]
+  votes       Vote[]
+  tags        PostTag[]
+  reports     Report[]
+
+  @@index([authorId])
+  @@index([category])
+  @@index([isPinned])
+  @@index([createdAt])
+}
+
+model Comment {
+  id          String    @id @default(cuid())
+  content     String    @db.Text
+  postId      String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id])
+  parentId    String?
+  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies     Comment[] @relation("CommentReplies")
+  isAnonymous Boolean   @default(false)
+  isEdited    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  votes       Vote[]
+  reports     Report[]
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+}
+
+model Vote {
+  id          String    @id @default(cuid())
+  value       Int       // +1 ou -1
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  postId      String?
+  post        Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId   String?
+  comment     Comment?  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
+  @@index([postId])
+  @@index([commentId])
+}
+
+model Tag {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  color       String?
+  usageCount  Int       @default(0)
+  posts       PostTag[]
+
+  @@index([usageCount])
+}
+
+model PostTag {
+  postId      String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tagId       String
+  tag         Tag       @relation(fields: [tagId], references: [id])
+
+  @@id([postId, tagId])
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  reason      ReportReason
+  description String?
+  reporterId  String
+  reporter    User         @relation(fields: [reporterId], references: [id])
+  postId      String?
+  post        Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId   String?
+  comment     Comment?     @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  status      ReportStatus @default(PENDING)
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  resolution  String?
+  createdAt   DateTime     @default(now())
+
+  @@index([reporterId])
+  @@index([postId])
+  @@index([commentId])
+  @@index([status])
+}
+
+enum PostCategory {
+  GENERAL
+  EXPERIENCES
+  QUESTIONS
+  SUPPORT
+  VICTORIES
+  RESOURCES
+  DISCUSSION
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  HATE_SPEECH
+  MISINFORMATION
+  SELF_HARM
+  INAPPROPRIATE
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
