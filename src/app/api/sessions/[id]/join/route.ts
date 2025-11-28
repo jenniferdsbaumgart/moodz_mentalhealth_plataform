@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { ApiResponse } from "@/types/user"
 
@@ -11,7 +10,7 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     // Verificar autenticacao
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" } as ApiResponse,
@@ -110,3 +109,4 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     )
   }
 }
+

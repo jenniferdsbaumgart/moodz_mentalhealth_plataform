@@ -164,3 +164,4 @@ export function ExerciseSteps({
     </Card>
   )
 }
+

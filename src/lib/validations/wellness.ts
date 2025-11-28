@@ -69,3 +69,4 @@ export type JournalPromptInput = z.infer<typeof journalPromptSchema>
 export type MindfulnessExerciseInput = z.infer<typeof mindfulnessExerciseSchema>
 export type ExerciseCompletionInput = z.infer<typeof exerciseCompletionSchema>
 export type WellnessFiltersInput = z.infer<typeof wellnessFiltersSchema>
+

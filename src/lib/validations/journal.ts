@@ -84,3 +84,4 @@ export const updateJournalSchema = z.object({
 export type CreateJournalInput = z.infer<typeof createJournalSchema>
 export type UpdateJournalInput = z.infer<typeof updateJournalSchema>
 export type JournalPromptCategory = typeof journalPromptCategories[number]
+

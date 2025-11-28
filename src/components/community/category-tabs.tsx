@@ -49,3 +49,4 @@ export function CategoryTabs({ value, onValueChange, counts }: CategoryTabsProps
     </Tabs>
   )
 }
+

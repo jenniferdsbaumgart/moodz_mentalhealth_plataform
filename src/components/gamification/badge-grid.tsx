@@ -251,3 +251,4 @@ export function BadgeGrid({ badges, unlockedBadgeIds = [], className }: BadgeGri
     </div>
   )
 }
+

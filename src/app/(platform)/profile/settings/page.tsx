@@ -1,22 +1,22 @@
 "use client"
 
-import React, { useState } from "react"
+import React from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Save } from "lucide-react"
+import { Save } from "lucide-react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { updateUserPreferencesSchema, type UpdateUserPreferencesInput } from "@/lib/validations/user"
 import { PROFILE_VISIBILITY_OPTIONS, LANGUAGE_OPTIONS, THEME_OPTIONS } from "@/lib/constants/user"
+import { toast } from "sonner"
 
 interface PreferencesFormData extends UpdateUserPreferencesInput {}
 
 export default function SettingsPage() {
-  const [isSaving, setIsSaving] = useState(false)
 
   const form = useForm<PreferencesFormData>({
     resolver: zodResolver(updateUserPreferencesSchema),
@@ -33,19 +33,30 @@ export default function SettingsPage() {
   })
 
   const onSubmit = async (data: PreferencesFormData) => {
-    setIsSaving(true)
-    try {
-      // TODO: Implement API call to save preferences
+    const savePreferences = async () => {
+      const response = await fetch('/api/user/preferences', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erro ao salvar preferências')
+      }
+
       console.log("Saving preferences:", data)
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      alert("Preferências salvas com sucesso!")
-    } catch (error) {
-      console.error("Error saving preferences:", error)
-      alert("Erro ao salvar preferências")
-    } finally {
-      setIsSaving(false)
+      return result
     }
+
+    toast.promise(savePreferences(), {
+      loading: "Salvando preferências...",
+      success: "Preferências salvas com sucesso!",
+      error: (error) => error.message || "Erro ao salvar preferências"
+    })
   }
 
   return (
@@ -217,18 +228,9 @@ export default function SettingsPage() {
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Salvar Configurações
-                </>
-              )}
+            <Button type="submit">
+              <Save className="h-4 w-4 mr-2" />
+              Salvar Configurações
             </Button>
           </div>
         </form>
@@ -236,3 +238,4 @@ export default function SettingsPage() {
     </MainLayout>
   )
 }
+

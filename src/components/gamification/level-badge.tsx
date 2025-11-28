@@ -90,3 +90,4 @@ export function LevelBadge({
     </div>
   )
 }
+

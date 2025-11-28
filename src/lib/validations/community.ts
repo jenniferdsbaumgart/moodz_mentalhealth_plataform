@@ -100,3 +100,4 @@ export type CreateVoteInput = z.infer<typeof createVoteSchema>
 export type CreateReportInput = z.infer<typeof createReportSchema>
 export type CreateTagInput = z.infer<typeof createTagSchema>
 export type CommunityFiltersInput = z.infer<typeof communityFiltersSchema>
+

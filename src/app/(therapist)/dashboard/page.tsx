@@ -1,189 +1,157 @@
 "use client"
 
+import { useTherapistDashboard } from "@/hooks/use-dashboard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, Users, BarChart, Clock, CheckCircle, AlertCircle } from "lucide-react"
+import { Users, Calendar, TrendingUp, Clock, Plus } from "lucide-react"
 import Link from "next/link"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
-export default function TherapistDashboard() {
+export default function TherapistDashboardPage() {
+  const { data, isLoading, error } = useTherapistDashboard()
+
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
+
+  if (error) {
+    return <div>Erro ao carregar dados</div>
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Dashboard do Terapeuta</h1>
+        <h1 className="text-3xl font-bold">Dashboard Terapeuta</h1>
         <p className="text-muted-foreground">
-          Gerencie suas sessões e acompanhe seus pacientes
+          Gerencie suas sessões, pacientes e acompanhe seu progresso
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sessões Hoje</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Próxima Sessão</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">
-              Próxima em 30 min
-            </p>
+            {data?.stats?.nextSessionDate ? (
+              <div className="text-2xl font-bold">
+                {format(new Date(data.stats.nextSessionDate), "dd/MM", { locale: ptBR })}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">Nenhuma agendada</div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Pacientes</CardTitle>
+            <CardTitle className="text-sm font-medium">Pacientes</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">
-              +2 este mês
-            </p>
+            <div className="text-2xl font-bold">{data?.stats?.totalPatients || 0}</div>
+            <p className="text-xs text-muted-foreground">pacientes únicos</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sessões Concluídas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Sessões no Mês</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">156</div>
-            <p className="text-xs text-muted-foreground">
-              Taxa de comparecimento: 92%
-            </p>
+            <div className="text-2xl font-bold">{data?.stats?.sessionsThisMonth || 0}</div>
+            <p className="text-xs text-muted-foreground">sessões realizadas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avaliação Média</CardTitle>
-            <BarChart className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Sessões Agendadas</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4.8</div>
-            <p className="text-xs text-muted-foreground">
-              ⭐⭐⭐⭐⭐
-            </p>
+            <div className="text-2xl font-bold">{data?.stats?.upcomingCount || 0}</div>
+            <p className="text-xs text-muted-foreground">próximas sessões</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Próximas Sessões */}
+      {data?.upcomingSessions && data.upcomingSessions.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Clock className="mr-2 h-5 w-5" />
-              Sessões de Hoje
-            </CardTitle>
-            <CardDescription>Gerencie suas sessões agendadas</CardDescription>
+            <CardTitle>Próximas Sessões</CardTitle>
+            <CardDescription>Sessões que você irá conduzir</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center p-2 bg-muted rounded">
-                <span className="text-sm">14:00 - Grupo Ansiedade</span>
-                <span className="text-xs text-muted-foreground">8 participantes</span>
-              </div>
-              <div className="flex justify-between items-center p-2 bg-muted rounded">
-                <span className="text-sm">16:00 - Sessão Individual</span>
-                <span className="text-xs text-muted-foreground">João Silva</span>
-              </div>
-              <div className="flex justify-between items-center p-2 bg-muted rounded">
-                <span className="text-sm">18:00 - Grupo Depressão</span>
-                <span className="text-xs text-muted-foreground">12 participantes</span>
-              </div>
+            <div className="space-y-3">
+              {data.upcomingSessions.map((session) => (
+                <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div className="flex-1">
+                    <p className="font-medium">{session.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(session.scheduledAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} • {session.participantCount}/{session.maxParticipants} participantes
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`/therapist/sessions/${session.id}`}>Gerenciar</Link>
+                  </Button>
+                </div>
+              ))}
             </div>
-            <Button asChild className="w-full mt-4">
-              <Link href="/therapist/sessions">Ver Todas as Sessões</Link>
-            </Button>
           </CardContent>
         </Card>
+      )}
 
+      {/* Sessões Recentes */}
+      {data?.recentSessions && data.recentSessions.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Users className="mr-2 h-5 w-5" />
-              Pacientes Recentes
-            </CardTitle>
-            <CardDescription>Acompanhe seus pacientes</CardDescription>
+            <CardTitle>Sessões Recentes</CardTitle>
+            <CardDescription>Suas últimas sessões realizadas</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center p-2 bg-muted rounded">
-                <span className="text-sm">Maria Santos</span>
-                <span className="text-xs text-green-600">Ativa</span>
-              </div>
-              <div className="flex justify-between items-center p-2 bg-muted rounded">
-                <span className="text-sm">Pedro Oliveira</span>
-                <span className="text-xs text-yellow-600">Em progresso</span>
-              </div>
-              <div className="flex justify-between items-center p-2 bg-muted rounded">
-                <span className="text-sm">Ana Costa</span>
-                <span className="text-xs text-red-600">Atenção</span>
-              </div>
+            <div className="space-y-3">
+              {data.recentSessions.slice(0, 3).map((session) => (
+                <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div className="flex-1">
+                    <p className="font-medium">{session.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(session.date), "dd/MM/yyyy", { locale: ptBR })} • {session.participantCount} participantes
+                    </p>
+                  </div>
+                  <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">Concluída</span>
+                </div>
+              ))}
             </div>
-            <Button asChild variant="outline" className="w-full mt-4">
-              <Link href="/therapist/patients">Ver Todos os Pacientes</Link>
-            </Button>
           </CardContent>
         </Card>
+      )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <AlertCircle className="mr-2 h-5 w-5" />
-              Pendências
-            </CardTitle>
-            <CardDescription>Itens que precisam de atenção</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center p-2 bg-red-50 dark:bg-red-900/20 rounded">
-                <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
-                <span className="text-sm">2 sessões precisam de reagendamento</span>
-              </div>
-              <div className="flex items-center p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded">
-                <AlertCircle className="h-4 w-4 text-yellow-500 mr-2" />
-                <span className="text-sm">3 avaliações pendentes</span>
-              </div>
-              <div className="flex items-center p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                <AlertCircle className="h-4 w-4 text-blue-500 mr-2" />
-                <span className="text-sm">1 relatório mensal pendente</span>
-              </div>
-            </div>
-            <Button asChild variant="outline" className="w-full mt-4">
-              <Link href="/therapist/schedule">Gerenciar Agenda</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Analytics Preview */}
+      {/* Ações Rápidas */}
       <Card>
         <CardHeader>
-          <CardTitle>Visão Geral do Mês</CardTitle>
-          <CardDescription>Seu desempenho nas últimas 4 semanas</CardDescription>
+          <CardTitle>Ações Rápidas</CardTitle>
+          <CardDescription>Gerencie suas sessões e pacientes</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">28</div>
-              <p className="text-sm text-muted-foreground">Sessões realizadas</p>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">96%</div>
-              <p className="text-sm text-muted-foreground">Taxa de comparecimento</p>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">4.9</div>
-              <p className="text-sm text-muted-foreground">Avaliação média</p>
-            </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            <Button asChild>
+              <Link href="/therapist/sessions/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Criar Nova Sessão
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/therapist/sessions">
+                <Calendar className="mr-2 h-4 w-4" />
+                Ver Minhas Sessões
+              </Link>
+            </Button>
           </div>
-          <Button asChild className="w-full mt-4">
-            <Link href="/therapist/analytics">Ver Analytics Detalhados</Link>
-          </Button>
         </CardContent>
       </Card>
     </div>

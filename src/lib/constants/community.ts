@@ -137,3 +137,4 @@ export const VOTE_LABELS = {
   [VOTE_VALUES.UP]: "Útil",
   [VOTE_VALUES.DOWN]: "Não útil",
 } as const
+

@@ -49,3 +49,4 @@ export function VideoGrid({ participants, localParticipantId, therapistId }: Vid
     </div>
   )
 }
+

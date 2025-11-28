@@ -38,3 +38,4 @@ export function CategorySelector({ value, onChange, className }: CategorySelecto
     </div>
   )
 }
+

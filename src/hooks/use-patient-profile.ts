@@ -131,3 +131,4 @@ export function usePatientProfile() {
     isPatient: session?.user?.role === "PATIENT",
   }
 }
+

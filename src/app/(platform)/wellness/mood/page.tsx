@@ -1,11 +1,9 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { MainLayout } from "@/components/layout/main-layout"
+import { DashboardShell } from "@/components/layout/dashboard-shell"
 import { MoodInput } from "@/components/wellness/mood-input"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
-import Link from "next/link"
+import { ExportDataDialog } from "@/components/wellness/export-data-dialog"
 
 export default function MoodPage() {
   const router = useRouter()
@@ -15,20 +13,13 @@ export default function MoodPage() {
   }
 
   return (
-    <MainLayout>
-      <div className="py-8">
-        {/* Navigation */}
-        <div className="mb-6">
-          <Button variant="ghost" size="sm" asChild className="mb-4">
-            <Link href="/wellness">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar para Bem-estar
-            </Link>
-          </Button>
-        </div>
-
-        <MoodInput onSuccess={handleSuccess} />
-      </div>
-    </MainLayout>
+    <DashboardShell
+      title="Registro de Humor"
+      description="Acompanhe suas emoções ao longo do tempo"
+      action={<ExportDataDialog />}
+    >
+      <MoodInput onSuccess={handleSuccess} />
+    </DashboardShell>
   )
 }
+

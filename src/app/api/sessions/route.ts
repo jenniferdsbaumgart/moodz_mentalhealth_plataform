@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { createSessionSchema } from "@/lib/validations/session"
 import { ApiResponse } from "@/types/user"
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -53,7 +52,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const sessionAuth = await getServerSession(authOptions)
+    const sessionAuth = await auth()
 
     if (!sessionAuth?.user?.id) {
       return NextResponse.json(
@@ -125,3 +124,4 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+

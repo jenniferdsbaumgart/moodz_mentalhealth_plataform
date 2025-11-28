@@ -154,3 +154,4 @@ export const MOOD_LEVELS = [
 ] as const
 
 export type MoodLevel = typeof MOOD_LEVELS[number]["value"]
+

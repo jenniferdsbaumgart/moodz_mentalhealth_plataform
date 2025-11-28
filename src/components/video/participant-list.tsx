@@ -95,3 +95,4 @@ export function ParticipantList({ participants, maxHeight = "400px" }: Participa
     </div>
   )
 }
+

@@ -91,10 +91,10 @@ export default function AchievementsPage() {
             }
 
             // Calculate progress for locked badges
-            const progress = null
+            let progress = null
             if (badge.criteriaType && gamificationData?.data) {
               const stats = gamificationData.data
-              const current = 0
+              let current = 0
               const target = badge.criteriaValue || 0
 
               switch (badge.criteriaType) {

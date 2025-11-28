@@ -103,3 +103,4 @@ export function useTherapistProfile() {
     isTherapist: session?.user?.role === "THERAPIST",
   }
 }
+

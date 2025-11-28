@@ -81,3 +81,4 @@ export type UpdateUserProfileInput = z.infer<typeof updateUserProfileSchema>
 export type UpdateTherapistProfileInput = z.infer<typeof updateTherapistProfileSchema>
 export type UpdatePatientProfileInput = z.infer<typeof updatePatientProfileSchema>
 export type UpdateUserPreferencesInput = z.infer<typeof updateUserPreferencesSchema>
+

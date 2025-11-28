@@ -240,3 +240,4 @@ export function GamificationStats({ stats, className }: GamificationStatsProps) 
     </div>
   )
 }
+

@@ -254,3 +254,4 @@ export const WELLNESS_BADGES = {
   MINDFUL_MASTER: { name: "Mestre Mindfulness", description: "Completou 25 exercícios" },
   EMOTIONAL_AWARE: { name: "Consciência Emocional", description: "Registrou 10 emoções diferentes" },
 } as const
+
