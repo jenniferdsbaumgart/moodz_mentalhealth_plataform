@@ -3,6 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/session-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { QueryProvider } from "@/components/providers/query-provider";
+import { Toaster } from "sonner";
+import { SkipLink } from "@/components/accessibility/skip-link";
+import { ScreenReaderAnnouncer } from "@/components/accessibility/announcer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,14 +33,32 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>{children}</AuthProvider>
-        </ThemeProvider>
+        <SkipLink />
+        <ScreenReaderAnnouncer />
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AuthProvider>
+              <main id="main-content">
+                {children}
+              </main>
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  style: {
+                    background: "hsl(var(--background))",
+                    color: "hsl(var(--foreground))",
+                    border: "1px solid hsl(var(--border))",
+                  },
+                }}
+              />
+            </AuthProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );

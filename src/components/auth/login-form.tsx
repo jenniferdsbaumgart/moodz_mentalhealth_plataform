@@ -65,29 +65,39 @@ export function LoginForm() {
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">
+              Email <span aria-hidden="true">*</span>
+            </Label>
             <Input
               id="email"
               type="email"
               placeholder="seu@email.com"
+              aria-required="true"
+              aria-invalid={!!form.formState.errors.email}
+              aria-describedby={form.formState.errors.email ? "email-error" : undefined}
               {...form.register("email")}
             />
             {form.formState.errors.email && (
-              <p className="text-sm text-red-500">
+              <p id="email-error" className="text-sm text-red-500" role="alert">
                 {form.formState.errors.email.message}
               </p>
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
+            <Label htmlFor="password">
+              Senha <span aria-hidden="true">*</span>
+            </Label>
             <Input
               id="password"
               type="password"
               placeholder="••••••••"
+              aria-required="true"
+              aria-invalid={!!form.formState.errors.password}
+              aria-describedby={form.formState.errors.password ? "password-error" : undefined}
               {...form.register("password")}
             />
             {form.formState.errors.password && (
-              <p className="text-sm text-red-500">
+              <p id="password-error" className="text-sm text-red-500" role="alert">
                 {form.formState.errors.password.message}
               </p>
             )}
@@ -109,3 +119,4 @@ export function LoginForm() {
     </Card>
   )
 }
+

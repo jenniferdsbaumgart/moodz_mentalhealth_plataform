@@ -215,6 +215,7 @@ export function SessionForm({ initialData, onSubmit, isLoading }: SessionFormPro
                 size="icon"
                 onClick={addTag}
                 disabled={!currentTag.trim() || tags.length >= 5 || isLoading}
+                aria-label="Adicionar tag"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -260,3 +261,4 @@ export function SessionForm({ initialData, onSubmit, isLoading }: SessionFormPro
     </form>
   )
 }
+
