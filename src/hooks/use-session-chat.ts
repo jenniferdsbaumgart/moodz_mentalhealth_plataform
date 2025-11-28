@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { socketManager } from '@/lib/socket'
+import { pusherClient } from '@/lib/pusher'
 
 export interface ChatMessage {
   id: string
@@ -31,15 +31,17 @@ export function useSessionChat({
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const hasJoinedRef = useRef(false)
+  const channelRef = useRef<any>(null)
 
-  // Connect to socket and join session
+  // Connect to Pusher and join session channel
   useEffect(() => {
     if (!sessionId || !userId || hasJoinedRef.current) return
 
     setIsConnecting(true)
 
-    // Connect to socket
-    const socket = socketManager.connect()
+    // Subscribe to session channel
+    const channel = pusherClient.subscribe(`session-${sessionId}`)
+    channelRef.current = channel
 
     // Set up event listeners
     const handleChatMessage = (message: ChatMessage) => {
@@ -60,35 +62,49 @@ export function useSessionChat({
       )
     }
 
-    const handlePreviousMessages = (previousMessages: ChatMessage[]) => {
-      setMessages(previousMessages)
+    // Bind events
+    channel.bind('chat-message', handleChatMessage)
+    channel.bind('message-deleted', handleMessageDeleted)
+
+    // Load previous messages from API
+    const loadPreviousMessages = async () => {
+      try {
+        const response = await fetch(`/api/sessions/${sessionId}/chat`)
+        if (response.ok) {
+          const data = await response.json()
+          setMessages(data.data || [])
+        }
+      } catch (error) {
+        console.error('Error loading previous messages:', error)
+      }
     }
-
-    // Listen for events
-    socketManager.onChatMessage(handleChatMessage)
-    socketManager.onMessageDeleted(handleMessageDeleted)
-    socketManager.onPreviousMessages(handlePreviousMessages)
-
-    // Join session
-    socketManager.joinSession(sessionId, userId, userName)
 
     // Check connection status
     const checkConnection = () => {
-      setIsConnected(socketManager.isConnected())
+      setIsConnected(pusherClient.connection.state === 'connected')
     }
 
-    checkConnection()
-    const interval = setInterval(checkConnection, 1000)
+    // Handle connection state changes
+    pusherClient.connection.bind('connected', () => {
+      setIsConnected(true)
+      setIsConnecting(false)
+      loadPreviousMessages()
+    })
 
+    pusherClient.connection.bind('disconnected', () => {
+      setIsConnected(false)
+    })
+
+    checkConnection()
     hasJoinedRef.current = true
-    setIsConnecting(false)
 
     // Cleanup
     return () => {
-      clearInterval(interval)
-      socketManager.offChatMessage()
-      socketManager.offMessageDeleted()
-      socketManager.offPreviousMessages()
+      if (channelRef.current) {
+        channelRef.current.unbind_all()
+        pusherClient.unsubscribe(`session-${sessionId}`)
+        channelRef.current = null
+      }
     }
   }, [sessionId, userId, userName])
 
@@ -96,24 +112,56 @@ export function useSessionChat({
   useEffect(() => {
     return () => {
       if (hasJoinedRef.current) {
-        socketManager.leaveSession(sessionId, userId)
+        if (channelRef.current) {
+          channelRef.current.unbind_all()
+          pusherClient.unsubscribe(`session-${sessionId}`)
+          channelRef.current = null
+        }
         hasJoinedRef.current = false
       }
     }
-  }, [sessionId, userId])
+  }, [sessionId])
 
   // Send message function
-  const sendMessage = useCallback((content: string) => {
+  const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || !isConnected) return
 
-    socketManager.sendMessage(sessionId, content.trim(), userId, userName)
-  }, [sessionId, userId, userName, isConnected])
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: content.trim() })
+      })
+
+      if (!response.ok) {
+        console.error('Failed to send message:', response.statusText)
+      }
+    } catch (error) {
+      console.error('Error sending message:', error)
+    }
+  }, [sessionId, isConnected])
 
   // Delete message function (therapist only)
-  const deleteMessage = useCallback((messageId: string) => {
+  const deleteMessage = useCallback(async (messageId: string) => {
     if (!isTherapist || !isConnected) return
 
-    socketManager.deleteMessage(sessionId, messageId)
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/chat`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ messageId })
+      })
+
+      if (!response.ok) {
+        console.error('Failed to delete message:', response.statusText)
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error)
+    }
   }, [sessionId, isTherapist, isConnected])
 
   // Get active (non-deleted) messages
@@ -129,3 +177,4 @@ export function useSessionChat({
     canDeleteMessages: isTherapist,
   }
 }
+
