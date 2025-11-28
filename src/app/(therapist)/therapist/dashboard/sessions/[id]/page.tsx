@@ -25,7 +25,6 @@ import Link from "next/link"
 import { SESSION_CATEGORIES } from "@/lib/constants/session"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import Link from "next/link"
 
 interface SessionWithDetails extends GroupSession {
   participants: (SessionParticipant & {
