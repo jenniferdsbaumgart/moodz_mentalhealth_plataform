@@ -1,6 +1,7 @@
 "use client"
 
 import { ThemeToggle } from "@/components/theme-toggle"
+import { MobileNav } from "./mobile-nav"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -22,13 +23,18 @@ export function Header() {
   }
 
   return (
-    <header className="border-b bg-card">
-      <div className="flex h-16 items-center px-4">
-        <div className="flex items-center space-x-4">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
+      <div className="container flex h-14 items-center">
+        {/* Mobile Navigation */}
+        <MobileNav />
+
+        {/* Logo - visible on all screens */}
+        <div className="mr-6 flex items-center space-x-2">
           <h1 className="text-xl font-semibold text-primary">Moodz</h1>
         </div>
 
-        <div className="ml-auto flex items-center space-x-4">
+        {/* Rest of header */}
+        <div className="flex flex-1 items-center justify-end space-x-4">
           <ThemeToggle />
 
           {session?.user ? (
@@ -80,3 +86,4 @@ export function Header() {
     </header>
   )
 }
+

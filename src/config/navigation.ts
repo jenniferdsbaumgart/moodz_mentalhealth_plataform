@@ -19,7 +19,7 @@ export const navigationByRole: Record<Role, NavItem[]> = {
   ],
   THERAPIST: [
     { title: "Dashboard", href: "/therapist/dashboard", icon: Home },
-    { title: "Minhas Sessoes", href: "/therapist/sessions", icon: Calendar },
+    { title: "Minhas Sessões", href: "/therapist/sessions", icon: Calendar },
     { title: "Pacientes", href: "/therapist/patients", icon: Users },
     { title: "Agenda", href: "/therapist/schedule", icon: Calendar },
     { title: "Analytics", href: "/therapist/analytics", icon: BarChart },
@@ -27,12 +27,20 @@ export const navigationByRole: Record<Role, NavItem[]> = {
   ADMIN: [
     { title: "Dashboard", href: "/admin/dashboard", icon: Home },
     { title: "Usuarios", href: "/admin/users", icon: Users },
+    { title: "Terapeutas", href: "/admin/therapists", icon: UserCheck },
     { title: "Moderacao", href: "/admin/moderation", icon: Shield },
     { title: "Blog", href: "/admin/blog", icon: BookOpen },
   ],
   SUPER_ADMIN: [
+    { title: "Dashboard", href: "/super-admin/dashboard", icon: Home },
+    { title: "Admins", href: "/super-admin/admins", icon: Shield },
+    { title: "Audit Logs", href: "/super-admin/audit", icon: FileText },
     { title: "Sistema", href: "/super-admin/system", icon: Settings },
-    { title: "Admins", href: "/super-admin/admins", icon: Users },
-    { title: "Auditoria", href: "/super-admin/audit", icon: Shield },
   ],
+}
+
+export function getNavigationItems(role?: Role): NavItem[] {
+  if (!role) return []
+
+  return navigationByRole[role] || []
 }
