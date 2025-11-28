@@ -119,4 +119,44 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Indicadores de foco visíveis e consistentes */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Remover outline padrão do navegador */
+  :focus:not(:focus-visible) {
+    @apply outline-none;
+  }
+
+  /* Foco para links */
+  a:focus-visible {
+    @apply rounded-sm;
+  }
+
+  /* Foco para inputs */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply ring-2 ring-ring;
+  }
+
+  /* Alto contraste para modo de alto contraste */
+  @media (prefers-contrast: high) {
+    :focus-visible {
+      @apply ring-4;
+    }
+  }
+}
+
+/* Animação reduzida para usuários que preferem */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
