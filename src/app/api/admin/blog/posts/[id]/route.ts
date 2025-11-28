@@ -12,7 +12,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const session = await auth()
-  if (!session?.user || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
+  if (!session?.user || !["ADMIN", "THERAPIST", "SUPER_ADMIN"].includes(session.user.role)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
   }
 
@@ -56,7 +56,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   const session = await auth()
-  if (!session?.user || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
+  if (!session?.user || !["ADMIN", "THERAPIST", "SUPER_ADMIN"].includes(session.user.role)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
   }
 
@@ -73,6 +73,11 @@ export async function PATCH(
 
     if (!existingPost) {
       return NextResponse.json({ error: "Post não encontrado" }, { status: 404 })
+    }
+
+    // Verificar permissões: therapist só pode editar seus próprios posts
+    if (session.user.role === "THERAPIST" && existingPost.authorId !== session.user.id) {
+      return NextResponse.json({ error: "Você só pode editar seus próprios posts" }, { status: 403 })
     }
 
     // Preparar dados para atualização
@@ -203,8 +208,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const session = await auth()
-  if (!session?.user || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
+  if (!session?.user || session.user.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Apenas Super Admin pode deletar posts" }, { status: 403 })
   }
 
   try {
