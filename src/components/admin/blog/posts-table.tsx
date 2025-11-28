@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useSearchParams } from "next/navigation"
+import { useBlogApi } from "@/hooks/use-blog-api"
+import { useAuth } from "@/hooks/use-auth"
 import {
   Table,
   TableBody,
@@ -92,6 +94,8 @@ const statusIcons = {
 export function PostsTable() {
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
+  const { api, permissions } = useBlogApi()
+  const { user } = useAuth()
   const [deletePost, setDeletePost] = useState<BlogPost | null>(null)
 
   // Parse filters from URL
@@ -100,15 +104,15 @@ export function PostsTable() {
   const page = parseInt(searchParams.get("page") || "1")
 
   const { data, isLoading } = useQuery({
-    queryKey: ["admin", "blog-posts", { status, search, page }],
+    queryKey: ["blog-posts", { status, search, page }],
     queryFn: async () => {
       const params = new URLSearchParams()
       if (status) params.set("status", status)
       if (search) params.set("search", search)
       params.set("page", page.toString())
-      params.set("limit", "12") // 12 posts per page for admin
+      params.set("limit", "12")
 
-      const response = await fetch(`/api/admin/blog/posts?${params}`)
+      const response = await fetch(`${api.list}?${params}`)
       if (!response.ok) throw new Error("Failed to fetch posts")
       return response.json()
     },
@@ -116,7 +120,7 @@ export function PostsTable() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: BlogPostStatus }) => {
-      const response = await fetch(`/api/admin/blog/posts/${id}`, {
+      const response = await fetch(api.update(id), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -125,7 +129,7 @@ export function PostsTable() {
       return response.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "blog-posts"] })
+      queryClient.invalidateQueries({ queryKey: ["blog-posts"] })
       toast.success("Status do post atualizado")
     },
     onError: () => {
@@ -135,13 +139,13 @@ export function PostsTable() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/admin/blog/posts/${id}`, {
+      const response = await fetch(api.delete(id), {
         method: "DELETE",
       })
       if (!response.ok) throw new Error("Failed to delete post")
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "blog-posts"] })
+      queryClient.invalidateQueries({ queryKey: ["blog-posts"] })
       toast.success("Post deletado com sucesso")
       setDeletePost(null)
     },
@@ -276,14 +280,21 @@ export function PostsTable() {
                               Ver público
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/blog/${post.id}/edit`}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </Link>
-                          </DropdownMenuItem>
 
-                          {post.status === "DRAFT" && (
+                          {permissions.canEdit && (
+                            <DropdownMenuItem asChild>
+                              <Link href={
+                                user?.role === "THERAPIST"
+                                  ? `/therapist/blog/${post.id}/edit`
+                                  : `/admin/blog/${post.id}/edit`
+                              }>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
+
+                          {permissions.canEdit && post.status === "DRAFT" && (
                             <DropdownMenuItem
                               onClick={() => handleStatusChange(post, "PUBLISHED")}
                               disabled={updateStatusMutation.isPending}
@@ -293,7 +304,7 @@ export function PostsTable() {
                             </DropdownMenuItem>
                           )}
 
-                          {post.status === "PUBLISHED" && (
+                          {permissions.canEdit && post.status === "PUBLISHED" && (
                             <DropdownMenuItem
                               onClick={() => handleStatusChange(post, "ARCHIVED")}
                               disabled={updateStatusMutation.isPending}
@@ -303,7 +314,7 @@ export function PostsTable() {
                             </DropdownMenuItem>
                           )}
 
-                          {post.status === "ARCHIVED" && (
+                          {permissions.canEdit && post.status === "ARCHIVED" && (
                             <DropdownMenuItem
                               onClick={() => handleStatusChange(post, "DRAFT")}
                               disabled={updateStatusMutation.isPending}
@@ -313,13 +324,15 @@ export function PostsTable() {
                             </DropdownMenuItem>
                           )}
 
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleDelete(post)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Deletar
-                          </DropdownMenuItem>
+                          {permissions.canDelete && (
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => handleDelete(post)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Deletar
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

@@ -25,6 +25,8 @@ import { generateSlug, extractExcerpt, generateMetaDescription } from "@/lib/blo
 import { toast } from "sonner"
 import { Save, Eye, X, Upload, Search } from "lucide-react"
 import { BlogPost, BlogCategory, BlogTag } from "@prisma/client"
+import { useBlogApi } from "@/hooks/use-blog-api"
+import { useAuth } from "@/hooks/use-auth"
 
 interface PostFormProps {
   post?: BlogPost & {
@@ -38,6 +40,8 @@ interface PostFormProps {
 
 export function PostForm({ post, categories, tags, mode }: PostFormProps) {
   const router = useRouter()
+  const { api } = useBlogApi()
+  const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [coverImage, setCoverImage] = useState(post?.coverImage || "")
   const [selectedTags, setSelectedTags] = useState<string[]>(
@@ -89,8 +93,8 @@ export function PostForm({ post, categories, tags, mode }: PostFormProps) {
       }
 
       const url = mode === "create"
-        ? "/api/admin/blog/posts"
-        : `/api/admin/blog/posts/${post!.id}`
+        ? api.create
+        : api.update(post!.id)
 
       const method = mode === "create" ? "POST" : "PATCH"
 
@@ -115,7 +119,10 @@ export function PostForm({ post, categories, tags, mode }: PostFormProps) {
 
       // Redirect to edit mode for new posts
       if (mode === "create") {
-        router.push(`/admin/blog/${savedPost.id}/edit`)
+        const editPath = user?.role === "THERAPIST"
+          ? `/therapist/blog/${savedPost.id}/edit`
+          : `/admin/blog/${savedPost.id}/edit`
+        router.push(editPath)
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao salvar post")

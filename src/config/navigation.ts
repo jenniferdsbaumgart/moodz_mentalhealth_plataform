@@ -23,6 +23,7 @@ export const navigationByRole: Record<Role, NavItem[]> = {
     { title: "Pacientes", href: "/therapist/patients", icon: Users },
     { title: "Agenda", href: "/therapist/schedule", icon: Calendar },
     { title: "Analytics", href: "/therapist/analytics", icon: BarChart },
+    { title: "Blog", href: "/therapist/blog", icon: BookOpen },
   ],
   ADMIN: [
     { title: "Dashboard", href: "/admin/dashboard", icon: Home },
