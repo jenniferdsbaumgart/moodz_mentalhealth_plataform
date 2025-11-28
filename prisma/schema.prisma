@@ -52,6 +52,9 @@ model User {
 
   // Audit
   auditLogs      AuditLog[]
+
+  // Blog
+  blogPosts      BlogPost[]
 }
 
 model Account {
@@ -308,6 +311,80 @@ model SystemSettings {
   defaultSessionDuration Int     @default(60) // minutos
   updatedAt             DateTime @updatedAt
   updatedBy             String?
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model BlogCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  color       String   @default("#3b82f6") // Tailwind blue-500
+  icon        String?  // Lucide icon name
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  posts       BlogPost[]
+
+  @@index([slug])
+  @@index([order])
+}
+
+model BlogTag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  posts     BlogPostTag[]
+
+  @@index([slug])
+}
+
+model BlogPost {
+  id          String          @id @default(cuid())
+  title       String
+  slug        String          @unique
+  excerpt     String?
+  content     String
+  coverImage  String?
+  status      BlogPostStatus  @default(DRAFT)
+  publishedAt DateTime?
+  readingTime Int?            // em minutos
+  viewCount   Int             @default(0)
+  authorId    String
+  categoryId  String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  author      User            @relation(fields: [authorId], references: [id])
+  category    BlogCategory    @relation(fields: [categoryId], references: [id])
+  tags        BlogPostTag[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt])
+  @@index([authorId])
+  @@index([categoryId])
+}
+
+model BlogPostTag {
+  id     String @id @default(cuid())
+  postId String
+  tagId  String
+
+  post   BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    BlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, tagId])
+  @@index([postId])
+  @@index([tagId])
 }
 
 model EmergencyContact {

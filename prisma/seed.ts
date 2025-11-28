@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import { seedExercises } from "./seed-exercises"
 import { seedBadges } from "./seed-badges"
+import { seedBlogCategories } from "./seed-blog-categories"
 
 const prisma = new PrismaClient()
 
@@ -9,6 +10,7 @@ async function main() {
 
   await seedExercises()
   await seedBadges()
+  await seedBlogCategories()
 
   console.log("✅ Database seeding completed!")
 }
