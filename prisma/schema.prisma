@@ -49,6 +49,9 @@ model User {
   badges         UserBadge[]
   pointTransactions PointTransaction[]
   dailyCheckIns  DailyCheckIn[]
+
+  // Audit
+  auditLogs      AuditLog[]
 }
 
 model Account {
@@ -245,6 +248,66 @@ enum PointType {
   STREAK_BONUS
   ADMIN_BONUS
   PENALTY
+}
+
+enum AuditAction {
+  // Usuarios
+  USER_CREATED
+  USER_UPDATED
+  USER_DELETED
+  USER_BANNED
+  USER_UNBANNED
+  ROLE_CHANGED
+
+  // Admins
+  ADMIN_CREATED
+  ADMIN_REMOVED
+
+  // Terapeutas
+  THERAPIST_APPROVED
+  THERAPIST_REJECTED
+
+  // Conteudo
+  POST_DELETED
+  COMMENT_DELETED
+  REPORT_RESOLVED
+
+  // Sessoes
+  SESSION_CANCELLED
+
+  // Sistema
+  SETTINGS_UPDATED
+  SYSTEM_CONFIG_CHANGED
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  action      AuditAction
+  entity      String
+  entityId    String?
+  details     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime    @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+model SystemSettings {
+  id                    String   @id @default("system")
+  maintenanceMode       Boolean  @default(false)
+  maintenanceMessage    String?
+  allowNewRegistrations Boolean  @default(true)
+  maxSessionParticipants Int     @default(12)
+  maxPostsPerDay        Int      @default(10)
+  defaultSessionDuration Int     @default(60) // minutos
+  updatedAt             DateTime @updatedAt
+  updatedBy             String?
 }
 
 model EmergencyContact {

@@ -204,3 +204,4 @@ export async function seedAdvancedBadges() {
   // Note: Point types are enums and don't need seeding
   console.log(`Available point types: ${pointTypes.length}`)
 }
+
