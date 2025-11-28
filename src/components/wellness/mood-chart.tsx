@@ -14,6 +14,7 @@ import {
 } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { CARD_HOVER } from "@/lib/design-tokens"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TrendingUp, TrendingDown, Minus } from "lucide-react"
 
@@ -40,7 +41,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload
     return (
-      <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+      <div className="bg-background border border-border rounded-lg p-4 shadow-lg">
         <p className="font-medium">{`Dia ${label}`}</p>
         {data.hasEntry ? (
           <div className="space-y-1 mt-2">
