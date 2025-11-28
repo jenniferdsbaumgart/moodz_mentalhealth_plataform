@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { VideoRoom } from "@/components/video/video-room"
-import { useDailyRoom } from "@/lib/daily"
+import { useDailyRoom } from "@/lib/daily-client"
 import { Loader2 } from "lucide-react"
 
 export default function SessionRoomPage() {

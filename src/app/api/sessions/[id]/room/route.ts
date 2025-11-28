@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { createDailyRoom } from "@/lib/daily"
+import { createDailyRoom } from "@/lib/daily-server"
 import { ApiResponse } from "@/types/user"
 
 interface RouteParams {
