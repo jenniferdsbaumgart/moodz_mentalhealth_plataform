@@ -60,6 +60,12 @@ model User {
   reviewsGiven   TherapistReview[] @relation("ReviewsGiven")
   notesWritten   PatientNote[]     @relation("NotesWritten")
   notesAbout     PatientNote[]     @relation("NotesAbout")
+
+  // Notifications
+  notifications        Notification[]
+  notificationPreferences NotificationPreference[]
+  pushSubscriptions     PushSubscription[]
+  sentEmails           EmailLog[]
 }
 
 model Account {
@@ -873,4 +879,84 @@ enum ReportStatus {
   REVIEWING
   RESOLVED
   DISMISSED
+}
+
+enum NotificationType {
+  SESSION_REMINDER      // Lembrete de sessão
+  SESSION_STARTING      // Sessão começando
+  SESSION_CANCELLED     // Sessão cancelada
+  NEW_MESSAGE           // Nova mensagem no chat
+  NEW_BADGE             // Badge conquistado
+  STREAK_RISK           // Streak em risco
+  STREAK_ACHIEVED       // Streak mantido
+  NEW_POST_REPLY        // Resposta no post
+  POST_UPVOTED          // Post recebeu upvote
+  THERAPIST_APPROVED    // Terapeuta aprovado
+  NEW_REVIEW            // Nova avaliação (terapeuta)
+  SYSTEM_ANNOUNCEMENT   // Anúncio do sistema
+  WEEKLY_SUMMARY        // Resumo semanal
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+  BOUNCED
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?            // { link: "/sessions/123", sessionId: "..." }
+  read      Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+model NotificationPreference {
+  id      String           @id @default(cuid())
+  userId  String
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type    NotificationType
+  email   Boolean          @default(true)
+  push    Boolean          @default(true)
+  inApp   Boolean          @default(true)
+
+  @@unique([userId, type])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model EmailLog {
+  id        String      @id @default(cuid())
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id])
+  type      String      // "session_reminder", "welcome", etc
+  to        String
+  subject   String
+  status    EmailStatus @default(PENDING)
+  error     String?
+  sentAt    DateTime?
+  createdAt DateTime    @default(now())
+
+  @@index([userId])
+  @@index([status])
 }
