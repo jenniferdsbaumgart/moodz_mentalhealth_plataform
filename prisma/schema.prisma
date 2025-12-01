@@ -55,6 +55,11 @@ model User {
 
   // Blog
   blogPosts      BlogPost[]
+
+  // Therapist specific relations
+  reviewsGiven   TherapistReview[] @relation("ReviewsGiven")
+  notesWritten   PatientNote[]     @relation("NotesWritten")
+  notesAbout     PatientNote[]     @relation("NotesAbout")
 }
 
 model Account {
@@ -141,11 +146,81 @@ model TherapistProfile {
 
   hourlyRate     Decimal?  @db.Decimal(10, 2)
 
+  // Advanced profile fields
+  specializations String[]
+  languages       String[]
+  sessionPrice    Decimal?  @db.Decimal(10, 2)
+  currency        String?   @default("BRL")
+  availableForNew Boolean   @default(true)
+  publicBio       String?   @db.Text
+
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   // Sessions
   groupSessions  GroupSession[]
+  availabilities TherapistAvailability[]
+  reviews        TherapistReview[] @relation("ReviewsReceived")
+  stats          TherapistStats?
+}
+
+model TherapistAvailability {
+  id          String   @id @default(cuid())
+  therapistId String
+  therapist   TherapistProfile @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int      // 0=Domingo, 1=Segunda, ..., 6=Sabado
+  startTime   String   // "09:00"
+  endTime     String   // "17:00"
+  isRecurring Boolean  @default(true)
+  specificDate DateTime? // Para disponibilidade em data especifica
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([therapistId, dayOfWeek, startTime])
+  @@index([therapistId])
+}
+
+model TherapistReview {
+  id          String   @id @default(cuid())
+  sessionId   String
+  session     GroupSession @relation(fields: [sessionId], references: [id])
+  patientId   String
+  patient     User     @relation("ReviewsGiven", fields: [patientId], references: [id])
+  therapistId String
+  therapist   TherapistProfile @relation("ReviewsReceived", fields: [therapistId], references: [id])
+  rating      Int      // 1-5
+  comment     String?  @db.Text
+  isAnonymous Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@unique([sessionId, patientId])
+  @@index([therapistId])
+}
+
+model PatientNote {
+  id          String   @id @default(cuid())
+  therapistId String
+  therapist   User     @relation("NotesWritten", fields: [therapistId], references: [id])
+  patientId   String
+  patient     User     @relation("NotesAbout", fields: [patientId], references: [id])
+  content     String   @db.Text
+  isPrivate   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([therapistId, patientId])
+}
+
+model TherapistStats {
+  id              String   @id @default(cuid())
+  therapistId     String   @unique
+  therapist       TherapistProfile @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  totalSessions   Int      @default(0)
+  totalPatients   Int      @default(0)
+  avgRating       Decimal? @db.Decimal(3, 2) // Ex: 4.50
+  lastCalculatedAt DateTime @default(now())
+
+  @@index([therapistId])
 }
 
 model PatientProfile {
@@ -486,6 +561,7 @@ model GroupSession {
   participants    SessionParticipant[]
   chatMessages    SessionChatMessage[]
   notes           SessionNote[]
+  reviews         TherapistReview[]
 }
 
 model SessionParticipant {
