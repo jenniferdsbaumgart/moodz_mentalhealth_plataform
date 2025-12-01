@@ -14,6 +14,10 @@ export async function GET(req: NextRequest) {
   const role = searchParams.get("role")
   const status = searchParams.get("status")
   const search = searchParams.get("search")
+  const startDate = searchParams.get("startDate")
+  const endDate = searchParams.get("endDate")
+  const engagement = searchParams.get("engagement")
+  const verified = searchParams.get("verified")
 
   const where: any = {}
 
@@ -26,11 +30,43 @@ export async function GET(req: NextRequest) {
     ]
   }
 
+  // Date range filter
+  if (startDate || endDate) {
+    where.createdAt = {}
+    if (startDate) where.createdAt.gte = new Date(startDate)
+    if (endDate) where.createdAt.lte = new Date(endDate)
+  }
+
+  // Therapist verification filter
+  if (verified && role === "THERAPIST") {
+    where.therapistProfile = {
+      verified: verified === "verified" ? true : verified === "pending" ? false : undefined
+    }
+  }
+
+  // Get users with counts
   const [users, total] = await Promise.all([
     db.user.findMany({
       where,
-      include: {
-        profile: true
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        image: true,
+        _count: {
+          select: {
+            sessionParticipants: true,
+            posts: true
+          }
+        },
+        therapistProfile: role === "THERAPIST" ? {
+          select: {
+            verified: true
+          }
+        } : false
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
@@ -39,14 +75,32 @@ export async function GET(req: NextRequest) {
     db.user.count({ where })
   ])
 
+  // Filter by engagement level if specified
+  let filteredUsers = users
+  if (engagement) {
+    filteredUsers = users.filter(user => {
+      const sessionCount = user._count.sessionParticipants
+      switch (engagement) {
+        case "high":
+          return sessionCount >= 10
+        case "medium":
+          return sessionCount >= 5 && sessionCount < 10
+        case "low":
+          return sessionCount >= 1 && sessionCount < 5
+        case "none":
+          return sessionCount === 0
+        default:
+          return true
+      }
+    })
+  }
+
   return NextResponse.json({
-    users,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit)
-    }
+    users: filteredUsers,
+    total: engagement ? filteredUsers.length : total,
+    page,
+    limit,
+    totalPages: Math.ceil((engagement ? filteredUsers.length : total) / limit)
   })
 }
 
