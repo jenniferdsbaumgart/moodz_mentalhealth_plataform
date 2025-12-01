@@ -1,4 +1,12 @@
 import { db } from "@/lib/db"
+import webPush from "web-push"
+
+// Configure VAPID keys for web push
+webPush.setVapidDetails(
+  "mailto:contato@moodz.com",
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+  process.env.VAPID_PRIVATE_KEY!
+)
 
 /**
  * Sends a push notification to all active subscriptions for a user
@@ -22,75 +30,52 @@ export async function sendPushNotification(
       return
     }
 
-    // Send push notification to each subscription
-    const promises = subscriptions.map(async (subscription) => {
-      try {
-        await sendWebPush(subscription, title, message, data)
-      } catch (error) {
-        console.error(`Failed to send push to subscription ${subscription.id}:`, error)
-
-        // If subscription is invalid (410), remove it
-        if (error instanceof Error && error.message.includes('410')) {
-          await db.pushSubscription.delete({
-            where: { id: subscription.id }
-          })
-        }
+    // Create payload
+    const payload = JSON.stringify({
+      title,
+      body: message,
+      icon: "/icons/notification-icon.png",
+      badge: "/icons/badge-icon.png",
+      data: {
+        url: data?.link || "/notifications",
+        ...data
       }
     })
 
-    await Promise.allSettled(promises)
+    // Send push notification to each subscription
+    const results = await Promise.allSettled(
+      subscriptions.map(sub =>
+        webPush.sendNotification(
+          {
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: sub.p256dh,
+              auth: sub.auth
+            }
+          },
+          payload
+        )
+      )
+    )
+
+    // Remove invalid subscriptions (410 Gone)
+    for (let i = 0; i < results.length; i++) {
+      if (results[i].status === "rejected") {
+        const error = (results[i] as PromiseRejectedResult).reason
+        if (error.statusCode === 410) {
+          console.log(`Removing invalid subscription ${subscriptions[i].id}`)
+          await db.pushSubscription.delete({
+            where: { id: subscriptions[i].id }
+          })
+        } else {
+          console.error(`Failed to send push to subscription ${subscriptions[i].id}:`, error)
+        }
+      }
+    }
   } catch (error) {
     console.error("Error sending push notifications:", error)
     throw error
   }
-}
-
-/**
- * Sends a web push notification to a specific subscription
- */
-async function sendWebPush(
-  subscription: any,
-  title: string,
-  message: string,
-  data?: Record<string, any>
-): Promise<void> {
-  const vapidKeys = {
-    subject: process.env.VAPID_SUBJECT || 'mailto:admin@moodz.com',
-    publicKey: process.env.VAPID_PUBLIC_KEY,
-    privateKey: process.env.VAPID_PRIVATE_KEY
-  }
-
-  if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
-    throw new Error("VAPID keys not configured")
-  }
-
-  // Import web-push dynamically to avoid issues in environments without it
-  const webpush = await import('web-push')
-
-  webpush.setVapidDetails(
-    vapidKeys.subject,
-    vapidKeys.publicKey,
-    vapidKeys.privateKey
-  )
-
-  const payload = JSON.stringify({
-    title,
-    body: message,
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
-    data: data || {},
-    url: data?.link || '/notifications'
-  })
-
-  const pushSubscription = {
-    endpoint: subscription.endpoint,
-    keys: {
-      p256dh: subscription.p256dh,
-      auth: subscription.auth
-    }
-  }
-
-  await webpush.sendNotification(pushSubscription, payload)
 }
 
 /**

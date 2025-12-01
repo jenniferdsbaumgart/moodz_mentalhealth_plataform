@@ -1,6 +1,16 @@
 import { db } from "@/lib/db"
 import { NotificationType } from "@prisma/client"
 import { CreateNotificationInput } from "./service"
+import { sendEmail } from "../emails/service"
+import {
+  SessionReminderEmail,
+  SessionStartingEmail,
+  WelcomeEmail,
+  TherapistApprovedEmail,
+  WeeklySummaryEmail,
+  PasswordResetEmail,
+  NewBadgeEmail
+} from "../emails/templates"
 
 /**
  * Queues an email notification for sending
@@ -23,43 +33,18 @@ export async function queueEmail(
     }
 
     // Generate email content based on type
-    const emailContent = generateEmailContent(type, notification, user.name || 'User')
+    const emailTemplate = getEmailTemplate(type, notification, user.name || 'User', user.email)
 
-    // Create email log entry
-    await db.emailLog.create({
-      data: {
-        userId: userId,
-        type: type.toLowerCase(),
+    if (emailTemplate) {
+      await sendEmail({
         to: user.email,
-        subject: emailContent.subject,
-        status: 'PENDING'
-      }
-    })
-
-    // In a real implementation, you would queue this for sending
-    // For now, we'll simulate sending by updating the status
-    // In production, you'd use a service like SendGrid, SES, etc.
-
-    console.log(`Email queued for ${user.email}: ${emailContent.subject}`)
-
-    // Simulate sending (in production, this would be handled by a queue worker)
-    setTimeout(async () => {
-      try {
-        await db.emailLog.updateMany({
-          where: {
-            userId: userId,
-            type: type.toLowerCase(),
-            status: 'PENDING'
-          },
-          data: {
-            status: 'SENT',
-            sentAt: new Date()
-          }
-        })
-      } catch (error) {
-        console.error("Failed to update email status:", error)
-      }
-    }, 1000)
+        subject: emailTemplate.subject,
+        template: emailTemplate.template,
+        props: emailTemplate.props,
+        userId: userId,
+        type: type.toLowerCase()
+      })
+    }
 
   } catch (error) {
     console.error("Failed to queue email:", error)
@@ -68,92 +53,75 @@ export async function queueEmail(
 }
 
 /**
- * Generates email content based on notification type
+ * Gets the appropriate email template and props for a notification type
  */
-function generateEmailContent(
+function getEmailTemplate(
   type: NotificationType,
   notification: CreateNotificationInput,
-  userName: string
-): { subject: string; content: string } {
+  userName: string,
+  userEmail: string
+): { subject: string; template: any; props: any } | null {
   const baseUrl = process.env.NEXTAUTH_URL || 'https://moodz.com'
 
   switch (type) {
     case 'SESSION_REMINDER':
       return {
-        subject: 'Lembrete: Sua sessão começa em breve',
-        content: `
-          <h2>Olá ${userName}!</h2>
-          <p>Este é um lembrete de que sua sessão de terapia está programada para começar em breve.</p>
-          <p><strong>${notification.title}</strong></p>
-          <p>${notification.message}</p>
-          <p><a href="${baseUrl}/sessions/${notification.data?.sessionId || ''}">Acessar sessão</a></p>
-        `
+        subject: 'Lembrete: Sua sessão começa em 1 hora',
+        template: SessionReminderEmail,
+        props: {
+          userName,
+          sessionTitle: notification.data?.sessionTitle || 'Sessão de Terapia',
+          sessionDate: notification.data?.sessionDate || 'Hoje',
+          sessionTime: notification.data?.sessionTime || 'Agora',
+          therapistName: notification.data?.therapistName || 'Seu Terapeuta',
+          joinUrl: `${baseUrl}/sessions/${notification.data?.sessionId || ''}/room`
+        }
       }
 
-    case 'SESSION_CANCELLED':
+    case 'SESSION_STARTING':
       return {
-        subject: 'Sessão Cancelada',
-        content: `
-          <h2>Olá ${userName}!</h2>
-          <p>Infelizmente, uma sessão foi cancelada.</p>
-          <p><strong>${notification.title}</strong></p>
-          <p>${notification.message}</p>
-          <p><a href="${baseUrl}/sessions">Ver minhas sessões</a></p>
-        `
+        subject: 'Sua sessão está começando agora',
+        template: SessionStartingEmail,
+        props: {
+          userName,
+          sessionTitle: notification.data?.sessionTitle || 'Sessão de Terapia',
+          therapistName: notification.data?.therapistName || 'Seu Terapeuta',
+          joinUrl: `${baseUrl}/sessions/${notification.data?.sessionId || ''}/room`
+        }
       }
 
     case 'THERAPIST_APPROVED':
       return {
-        subject: 'Parabéns! Você foi aprovado como terapeuta',
-        content: `
-          <h2>Parabéns ${userName}!</h2>
-          <p>Seu perfil de terapeuta foi aprovado e você agora pode começar a atender pacientes.</p>
-          <p><a href="${baseUrl}/therapist/dashboard">Acessar painel do terapeuta</a></p>
-        `
-      }
-
-    case 'NEW_REVIEW':
-      return {
-        subject: 'Nova avaliação recebida',
-        content: `
-          <h2>Olá ${userName}!</h2>
-          <p>Você recebeu uma nova avaliação de um paciente.</p>
-          <p><strong>${notification.title}</strong></p>
-          <p>${notification.message}</p>
-          <p><a href="${baseUrl}/therapist/reviews">Ver avaliações</a></p>
-        `
-      }
-
-    case 'SYSTEM_ANNOUNCEMENT':
-      return {
-        subject: 'Anúncio Importante do Sistema',
-        content: `
-          <h2>Olá ${userName}!</h2>
-          <p>${notification.message}</p>
-          <p><a href="${baseUrl}/notifications">Ver detalhes</a></p>
-        `
+        subject: 'Parabéns! Seu perfil foi aprovado',
+        template: TherapistApprovedEmail,
+        props: {
+          userName,
+          dashboardUrl: `${baseUrl}/therapist/dashboard`,
+          profileUrl: `${baseUrl}/therapist/profile`,
+          patientsUrl: `${baseUrl}/therapist/patients`
+        }
       }
 
     case 'WEEKLY_SUMMARY':
       return {
         subject: 'Seu resumo semanal - Moodz',
-        content: `
-          <h2>Olá ${userName}!</h2>
-          <p>Aqui está seu resumo semanal de atividades no Moodz:</p>
-          <p>${notification.message}</p>
-          <p><a href="${baseUrl}/dashboard">Ver dashboard completo</a></p>
-        `
+        template: WeeklySummaryEmail,
+        props: {
+          userName,
+          userType: 'patient', // This should be determined from user role
+          weekStart: notification.data?.weekStart || 'Semana passada',
+          weekEnd: notification.data?.weekEnd || 'Esta semana',
+          stats: {
+            sessionsAttended: notification.data?.sessionsAttended || 0,
+            exercisesCompleted: notification.data?.exercisesCompleted || 0,
+            badgesEarned: notification.data?.badgesEarned || 0,
+            moodEntries: notification.data?.moodEntries || 0
+          }
+        }
       }
 
     default:
-      return {
-        subject: notification.title,
-        content: `
-          <h2>Olá ${userName}!</h2>
-          <p>${notification.message}</p>
-          <p><a href="${baseUrl}/notifications">Ver notificações</a></p>
-        `
-      }
+      return null
   }
 }
 
