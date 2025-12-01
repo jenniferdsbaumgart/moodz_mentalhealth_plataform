@@ -561,6 +561,10 @@ model GroupSession {
   coverImage      String?
   tags            String[]
 
+  // Cron job tracking
+  reminderSent    Boolean       @default(false)  // 1h reminder sent
+  startingSent    Boolean       @default(false)  // 5min reminder sent
+
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
