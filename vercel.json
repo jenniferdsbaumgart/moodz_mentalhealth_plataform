@@ -16,6 +16,14 @@
     {
       "path": "/api/cron/cleanup-notifications",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/update-therapist-stats",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/check-session-status",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
