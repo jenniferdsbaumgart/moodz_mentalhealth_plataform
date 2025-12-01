@@ -4,8 +4,8 @@ import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 
 /**
- * DELETE /api/admin/posts/[id]
- * Delete a post (admin moderation)
+ * DELETE /api/admin/comments/[id]
+ * Delete a comment (admin moderation)
  */
 export async function DELETE(
   request: NextRequest,
@@ -27,57 +27,61 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const postId = params.id
+    const commentId = params.id
 
-    // Get post info before deletion for logging
-    const post = await db.post.findUnique({
-      where: { id: postId },
+    // Get comment info before deletion for logging
+    const comment = await db.comment.findUnique({
+      where: { id: commentId },
       select: {
         id: true,
-        title: true,
+        content: true,
         authorId: true,
-        author: { select: { name: true, email: true } }
+        postId: true,
+        author: { select: { name: true, email: true } },
+        post: { select: { title: true } }
       }
     })
 
-    if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 })
+    if (!comment) {
+      return NextResponse.json({ error: "Comment not found" }, { status: 404 })
     }
 
-    // Delete post (cascades to comments, votes, etc.)
-    await db.post.delete({
-      where: { id: postId }
+    // Delete comment
+    await db.comment.delete({
+      where: { id: commentId }
     })
 
     // Log the action
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        action: "DELETE_POST",
-        entityType: "POST",
-        entityId: postId,
+        action: "DELETE_COMMENT",
+        entityType: "COMMENT",
+        entityId: commentId,
         details: JSON.stringify({
-          postTitle: post.title,
-          authorId: post.authorId,
-          authorName: post.author.name,
-          authorEmail: post.author.email
+          commentContent: comment.content.slice(0, 100),
+          postId: comment.postId,
+          postTitle: comment.post.title,
+          authorId: comment.authorId,
+          authorName: comment.author.name,
+          authorEmail: comment.author.email
         })
       }
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error deleting post:", error)
+    console.error("Error deleting comment:", error)
     return NextResponse.json(
-      { error: "Failed to delete post" },
+      { error: "Failed to delete comment" },
       { status: 500 }
     )
   }
 }
 
 /**
- * GET /api/admin/posts/[id]
- * Get post details for moderation
+ * GET /api/admin/comments/[id]
+ * Get comment details for moderation
  */
 export async function GET(
   request: NextRequest,
@@ -99,7 +103,7 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const post = await db.post.findUnique({
+    const comment = await db.comment.findUnique({
       where: { id: params.id },
       include: {
         author: {
@@ -110,10 +114,11 @@ export async function GET(
             image: true
           }
         },
-        comments: {
-          take: 10,
-          orderBy: { createdAt: "desc" },
-          include: {
+        post: {
+          select: {
+            id: true,
+            title: true,
+            content: true,
             author: {
               select: {
                 id: true,
@@ -122,25 +127,19 @@ export async function GET(
               }
             }
           }
-        },
-        _count: {
-          select: {
-            comments: true,
-            votes: true
-          }
         }
       }
     })
 
-    if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 })
+    if (!comment) {
+      return NextResponse.json({ error: "Comment not found" }, { status: 404 })
     }
 
-    return NextResponse.json(post)
+    return NextResponse.json(comment)
   } catch (error) {
-    console.error("Error fetching post:", error)
+    console.error("Error fetching comment:", error)
     return NextResponse.json(
-      { error: "Failed to fetch post" },
+      { error: "Failed to fetch comment" },
       { status: 500 }
     )
   }

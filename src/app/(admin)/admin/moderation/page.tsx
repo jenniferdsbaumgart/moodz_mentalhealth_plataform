@@ -1,311 +1,116 @@
 "use client"
 
-import Link from "next/link"
-import { MainLayout } from "@/components/layout/main-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { useReports } from "@/hooks/use-admin"
+import { useState } from "react"
 import {
+  Shield,
   AlertTriangle,
-  MessageSquare,
-  Users,
-  FileText,
-  TrendingUp,
-  CheckCircle,
-  Clock,
-  Ban,
-  ArrowRight,
+  History,
+  LayoutDashboard
 } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  ModerationDashboard,
+  ReportQueueEnhanced,
+  ReportDetailPanel,
+  ModerationLog
+} from "@/components/admin/moderation"
 
-export default function ModerationDashboard() {
-  // Get pending reports count
-  const { data: pendingReports } = useReports("PENDING", 1, 1)
-
-  const stats = {
-    pendingReports: pendingReports?.pagination?.total || 0,
-    totalPosts: 156, // Mock data - would come from API
-    totalComments: 892, // Mock data - would come from API
-    bannedUsers: 3, // Mock data - would come from API
-    resolvedToday: 12, // Mock data - would come from API
+interface Report {
+  id: string
+  contentType: "POST" | "COMMENT"
+  contentId: string
+  reason: string
+  description: string | null
+  status: string
+  createdAt: string
+  reporter: {
+    id: string
+    name: string | null
+    image: string | null
   }
+  content?: {
+    id: string
+    title?: string
+    content?: string
+    createdAt?: string
+    author?: {
+      id: string
+      name: string | null
+      image: string | null
+      email: string
+    }
+  }
+}
 
-  const recentActions = [
-    {
-      id: "1",
-      action: "Post deletado",
-      content: "Spam de produto",
-      user: "João Silva",
-      time: "2 horas atrás",
-      type: "removal",
-    },
-    {
-      id: "2",
-      action: "Usuário banido",
-      content: "Discurso de ódio",
-      user: "Maria Santos",
-      time: "4 horas atrás",
-      type: "ban",
-    },
-    {
-      id: "3",
-      action: "Comentário deletado",
-      content: "Conteúdo inapropriado",
-      user: "Pedro Costa",
-      time: "6 horas atrás",
-      type: "removal",
-    },
-    {
-      id: "4",
-      action: "Relatório dispensado",
-      content: "Denúncia infundada",
-      user: "Ana Oliveira",
-      time: "8 horas atrás",
-      type: "dismiss",
-    },
-  ]
+export default function ModerationPage() {
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null)
+  const [activeTab, setActiveTab] = useState("dashboard")
 
-  const getActionIcon = (type: string) => {
-    switch (type) {
-      case "removal":
-        return <FileText className="h-4 w-4" />
-      case "ban":
-        return <Ban className="h-4 w-4" />
-      case "dismiss":
-        return <CheckCircle className="h-4 w-4" />
-      default:
-        return <AlertTriangle className="h-4 w-4" />
+  const handleSelectReport = (report: Report) => {
+    setSelectedReport(report)
+    // Switch to queue tab if on dashboard
+    if (activeTab === "dashboard") {
+      setActiveTab("queue")
     }
   }
 
-  const getActionColor = (type: string) => {
-    switch (type) {
-      case "removal":
-        return "text-red-600"
-      case "ban":
-        return "text-red-700"
-      case "dismiss":
-        return "text-green-600"
-      default:
-        return "text-orange-600"
-    }
+  const handleActionComplete = () => {
+    setSelectedReport(null)
   }
 
   return (
-    <MainLayout>
-      <div className="max-w-6xl mx-auto py-8">
-        <div className="space-y-8">
-          {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold">Dashboard de Moderação</h1>
-            <p className="text-muted-foreground">
-              Monitore e gerencie a saúde da comunidade
-            </p>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Relatórios Pendentes
-                </CardTitle>
-                <AlertTriangle className="h-4 w-4 text-orange-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
-                  {stats.pendingReports}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Aguardando análise
-                </p>
-                {stats.pendingReports > 0 && (
-                  <Button asChild size="sm" className="mt-2 w-full">
-                    <Link href="/admin/moderation/reports">
-                      Ver relatórios
-                      <ArrowRight className="h-3 w-3 ml-1" />
-                    </Link>
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Posts Ativos
-                </CardTitle>
-                <FileText className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalPosts}</div>
-                <p className="text-xs text-muted-foreground">
-                  Na comunidade
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Comentários
-                </CardTitle>
-                <MessageSquare className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalComments}</div>
-                <p className="text-xs text-muted-foreground">
-                  Interações totais
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Usuários Banidos
-                </CardTitle>
-                <Ban className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">{stats.bannedUsers}</div>
-                <p className="text-xs text-muted-foreground">
-                  Atualmente banidos
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Activity & Quick Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Recent Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Ações Recentes
-                </CardTitle>
-                <CardDescription>
-                  Últimas ações de moderação realizadas
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentActions.map((action) => (
-                    <div key={action.id} className="flex items-start gap-3">
-                      <div className={`mt-0.5 ${getActionColor(action.type)}`}>
-                        {getActionIcon(action.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">
-                          {action.action}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {action.content} • {action.user}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {action.time}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <Button variant="outline" className="w-full mt-4" asChild>
-                  <Link href="/admin/moderation/reports">
-                    Ver todas as ações
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Ações Rápidas
-                </CardTitle>
-                <CardDescription>
-                  Ferramentas de moderação frequentes
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button asChild className="w-full justify-start" variant="outline">
-                  <Link href="/admin/moderation/reports">
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    Revisar Relatórios Pendentes
-                    {stats.pendingReports > 0 && (
-                      <Badge variant="destructive" className="ml-auto">
-                        {stats.pendingReports}
-                      </Badge>
-                    )}
-                  </Link>
-                </Button>
-
-                <Button asChild className="w-full justify-start" variant="outline">
-                  <Link href="/admin/users">
-                    <Users className="h-4 w-4 mr-2" />
-                    Gerenciar Usuários
-                  </Link>
-                </Button>
-
-                <Button asChild className="w-full justify-start" variant="outline">
-                  <Link href="/admin/content">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Moderar Conteúdo
-                  </Link>
-                </Button>
-
-                <Button asChild className="w-full justify-start" variant="outline">
-                  <Link href="/admin/analytics">
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    Ver Analytics
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Performance Metrics */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Métricas de Performance</CardTitle>
-              <CardDescription>
-                Eficiência da equipe de moderação
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {stats.resolvedToday}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Relatórios resolvidos hoje
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    2.3h
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Tempo médio de resposta
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    94%
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Taxa de resolução
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+    <div className="container mx-auto py-8 px-4">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold flex items-center gap-3">
+          <Shield className="h-8 w-8" />
+          Central de Moderação
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Gerencie reports, modere conteúdo e mantenha a comunidade segura
+        </p>
       </div>
-    </MainLayout>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <LayoutDashboard className="h-4 w-4" />
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="queue" className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Fila de Reports
+          </TabsTrigger>
+          <TabsTrigger value="log" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Log de Ações
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Dashboard Tab */}
+        <TabsContent value="dashboard">
+          <ModerationDashboard />
+        </TabsContent>
+
+        {/* Queue Tab */}
+        <TabsContent value="queue">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ReportQueueEnhanced
+              onSelectReport={handleSelectReport}
+              selectedReportId={selectedReport?.id || null}
+            />
+            <ReportDetailPanel
+              report={selectedReport}
+              onActionComplete={handleActionComplete}
+            />
+          </div>
+        </TabsContent>
+
+        {/* Log Tab */}
+        <TabsContent value="log">
+          <ModerationLog />
+        </TabsContent>
+      </Tabs>
+    </div>
   )
 }
-
