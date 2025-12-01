@@ -118,3 +118,4 @@ export type BlogPostUpdateInput = z.infer<typeof blogPostUpdateSchema>
 export type BlogFiltersInput = z.infer<typeof blogFiltersSchema>
 export type BlogCategoryInput = z.infer<typeof blogCategorySchema>
 export type BlogTagInput = z.infer<typeof blogTagSchema>
+

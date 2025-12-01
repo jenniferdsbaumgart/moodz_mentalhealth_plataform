@@ -199,3 +199,4 @@ export function Sidebar({ categories, tags, totalPosts }: SidebarProps) {
     </div>
   )
 }
+

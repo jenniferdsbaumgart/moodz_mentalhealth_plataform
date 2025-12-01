@@ -67,3 +67,4 @@ function stripHtml(html: string): string {
     .replace(/\n+/g, " ") // Remove quebras de linha extras
     .trim()
 }
+

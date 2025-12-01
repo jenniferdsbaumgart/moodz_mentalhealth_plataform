@@ -35,3 +35,4 @@ export async function withAuditLog<T>(
   await createAuditLog(input)
   return result
 }
+

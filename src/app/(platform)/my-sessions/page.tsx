@@ -6,7 +6,7 @@ import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tab"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Clock, Users, MapPin, CheckCircle, XCircle, AlertCircle } from "lucide-react"
 import { SESSION_CATEGORIES } from "@/lib/constants/session"
 import { format } from "date-fns"
@@ -278,4 +278,5 @@ export default function MySessionsPage() {
     </MainLayout>
   )
 }
+
 

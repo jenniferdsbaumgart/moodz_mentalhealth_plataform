@@ -52,6 +52,13 @@ export interface TherapistProfile {
   verifiedBy?: string | null
   rejectionReason?: string | null
   hourlyRate?: number | null
+  // Novos campos para perfil avançado
+  specializations?: string[]
+  languages?: string[]
+  sessionPrice?: number | null
+  currency?: string
+  availableForNew?: boolean
+  publicBio?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -147,6 +154,63 @@ export interface PatientProfileFormData {
   preferredCategories?: string[]
 }
 
+// Public therapist profile types
+export interface PublicTherapistProfile {
+  id: string
+  name: string | null
+  image: string | null
+  therapistProfile: {
+    id: string
+    crp: string
+    specialties: string[]
+    specializations: string[]
+    languages: string[]
+    bio: string
+    publicBio: string
+    education?: string | null
+    experience?: string | null
+    photoUrl?: string | null
+    isVerified: boolean
+    hourlyRate?: number | null
+    sessionPrice?: number | null
+    currency: string
+    availableForNew: boolean
+    stats?: {
+      totalSessions: number
+      totalPatients: number
+      avgRating?: number | null
+    } | null
+    reviews: Array<{
+      id: string
+      rating: number
+      comment?: string | null
+      isAnonymous: boolean
+      createdAt: Date
+      patientName?: string | null
+      sessionTitle: string
+    }>
+    availabilities: Array<{
+      id: string
+      dayOfWeek: number
+      startTime: string
+      endTime: string
+      isRecurring: boolean
+      specificDate?: Date | null
+    }>
+    upcomingSessions: Array<{
+      id: string
+      title: string
+      description: string
+      scheduledAt: Date
+      duration: number
+      maxParticipants: number
+      _count: {
+        participants: number
+      }
+    }>
+  }
+}
+
 export interface UserPreferencesFormData {
   emailNotifications?: boolean
   pushNotifications?: boolean
@@ -174,4 +238,5 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
     totalPages: number
   }
 }
+
 

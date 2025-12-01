@@ -205,3 +205,4 @@ export async function seedAdvancedBadges() {
   console.log(`Available point types: ${pointTypes.length}`)
 }
 
+

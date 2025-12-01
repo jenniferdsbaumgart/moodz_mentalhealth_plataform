@@ -138,3 +138,4 @@ export const VOTE_LABELS = {
   [VOTE_VALUES.DOWN]: "Não útil",
 } as const
 
+

@@ -112,3 +112,4 @@ export function calculateLevelFromXP(xp: number): LevelInfo {
   return LEVELS[Math.min(level - 1, LEVELS.length - 1)]
 }
 
+

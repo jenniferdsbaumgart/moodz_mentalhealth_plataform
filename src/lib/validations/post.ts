@@ -42,3 +42,4 @@ export type CreatePostInput = z.infer<typeof createPostSchema>
 export type UpdatePostInput = z.infer<typeof updatePostSchema>
 export type TagInput = z.infer<typeof tagSchema>
 
+

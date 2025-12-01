@@ -275,3 +275,4 @@ export function SessionFiltersComponent({ filters, onFiltersChange, totalResults
   )
 }
 
+

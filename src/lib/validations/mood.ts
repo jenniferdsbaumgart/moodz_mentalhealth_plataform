@@ -24,3 +24,4 @@ export const moodUpdateSchema = z.object({
 export type MoodEntryInput = z.infer<typeof moodEntrySchema>
 export type MoodUpdateInput = z.infer<typeof moodUpdateSchema>
 
+

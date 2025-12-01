@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { VideoRoom } from "@/components/video/video-room"
 import { useDailyRoom } from "@/lib/daily-client"
+import { ReviewPrompt } from "@/components/session/review-prompt"
 import { Loader2 } from "lucide-react"
 
 export default function SessionRoomPage() {
@@ -14,6 +15,8 @@ export default function SessionRoomPage() {
   const [isTherapist, setIsTherapist] = useState(false)
   const [therapistId, setTherapistId] = useState<string>()
   const [isLoadingToken, setIsLoadingToken] = useState(true)
+  const [showReviewPrompt, setShowReviewPrompt] = useState(false)
+  const [sessionTitle, setSessionTitle] = useState<string>()
 
   const { room, isLoading: isRoomLoading, error: roomError, joinRoom, leaveRoom } = useDailyRoom(roomUrl)
 
@@ -31,6 +34,7 @@ export default function SessionRoomPage() {
         setToken(data.data.token)
         setRoomUrl(data.data.roomUrl)
         setIsTherapist(data.data.isTherapist)
+        setSessionTitle(data.data.sessionTitle)
       } else {
         const error = await response.json()
         alert(error.message || "Erro ao acessar sala")
@@ -59,10 +63,16 @@ export default function SessionRoomPage() {
   const handleLeaveRoom = async () => {
     try {
       await leaveRoom()
-      router.push(`/sessions/${params.id}`)
+      // Show review prompt instead of redirecting immediately
+      setShowReviewPrompt(true)
     } catch (error) {
       console.error("Error leaving room:", error)
     }
+  }
+
+  const handleReviewComplete = () => {
+    setShowReviewPrompt(false)
+    router.push(`/sessions/${params.id}`)
   }
 
   // Show loading while fetching token
@@ -156,12 +166,22 @@ export default function SessionRoomPage() {
 
   // Show the video room interface
   return (
-    <VideoRoom
-      room={room}
-      sessionId={params.id}
-      onLeave={handleLeaveRoom}
-      isTherapist={isTherapist}
-      therapistId={therapistId}
-    />
+    <>
+      <VideoRoom
+        room={room}
+        sessionId={params.id}
+        onLeave={handleLeaveRoom}
+        isTherapist={isTherapist}
+        therapistId={therapistId}
+      />
+
+      {/* Review Prompt */}
+      <ReviewPrompt
+        sessionId={params.id}
+        isOpen={showReviewPrompt}
+        onClose={handleReviewComplete}
+        sessionTitle={sessionTitle}
+      />
+    </>
   )
 }

@@ -255,3 +255,4 @@ export const WELLNESS_BADGES = {
   EMOTIONAL_AWARE: { name: "Consciência Emocional", description: "Registrou 10 emoções diferentes" },
 } as const
 
+

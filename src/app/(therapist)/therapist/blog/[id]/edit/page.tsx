@@ -19,3 +19,4 @@ export default function EditTherapistPostPage({ params }: EditTherapistPostPageP
     </DashboardShell>
   )
 }
+

@@ -62,3 +62,4 @@ export const NOTIFICATIONS = {
     `🔥 Bônus de sequência! ${days} dias consecutivos!`,
 } as const
 
+

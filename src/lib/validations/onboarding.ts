@@ -16,3 +16,4 @@ export const therapistOnboardingSchema = z.object({
   documentUrl: z.string().url("URL do documento invalida"),
 })
 
+

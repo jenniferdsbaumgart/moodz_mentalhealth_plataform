@@ -100,6 +100,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         token,
         roomUrl: sessionData.roomUrl,
         isTherapist,
+        sessionTitle: sessionData.title,
       },
       message: "Token gerado com sucesso",
     } as ApiResponse)

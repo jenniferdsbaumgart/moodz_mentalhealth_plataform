@@ -75,3 +75,4 @@ export function hasAllPermissions(userRole: Role, permissions: Permission[]): bo
   return permissions.every(permission => hasPermission(userRole, permission))
 }
 
+

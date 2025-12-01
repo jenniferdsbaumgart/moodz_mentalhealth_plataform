@@ -72,3 +72,4 @@ export default async function EditPostPage({ params }: EditPostPageProps) {
     </DashboardShell>
   )
 }
+

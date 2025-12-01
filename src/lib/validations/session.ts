@@ -17,3 +17,4 @@ export const updateSessionSchema = createSessionSchema.partial()
 export type CreateSessionInput = z.infer<typeof createSessionSchema>
 export type UpdateSessionInput = z.infer<typeof updateSessionSchema>
 
+

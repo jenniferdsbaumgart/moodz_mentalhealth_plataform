@@ -76,3 +76,4 @@ export function AuthorCard({ author, publishedAt, readingTime, viewCount }: Auth
     </Card>
   )
 }
+

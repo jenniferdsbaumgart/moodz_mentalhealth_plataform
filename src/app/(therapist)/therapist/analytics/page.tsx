@@ -1,183 +1,141 @@
 "use client"
 
+import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { DashboardShell } from "@/components/layout/dashboard-shell"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line
-} from "recharts"
-import { Users, Calendar, TrendingUp, Award } from "lucide-react"
-
-const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#00C49F"]
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { OverviewCards } from "@/components/therapist/analytics/overview-cards"
+import { EngagementChart } from "@/components/therapist/analytics/engagement-chart"
+import { RatingsChart } from "@/components/therapist/analytics/ratings-chart"
+import { SessionsBreakdown } from "@/components/therapist/analytics/sessions-breakdown"
+import { DateRangePicker } from "@/components/therapist/analytics/date-range-picker"
 
 export default function TherapistAnalyticsPage() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["therapist", "analytics"],
+  const [period, setPeriod] = useState<"month" | "quarter" | "year">("month")
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date } | undefined>()
+
+  const { data: analyticsData, isLoading } = useQuery({
+    queryKey: ["therapist", "analytics", period, dateRange],
     queryFn: async () => {
-      const res = await fetch("/api/therapist/analytics")
-      if (!res.ok) throw new Error("Failed to fetch")
+      const params = new URLSearchParams({ period })
+      if (dateRange?.from && dateRange?.to) {
+        params.set("from", dateRange.from.toISOString())
+        params.set("to", dateRange.to.toISOString())
+      }
+
+      const res = await fetch(`/api/therapist/analytics?${params}`)
+      if (!res.ok) throw new Error("Failed to fetch analytics")
       return res.json()
     }
   })
 
-  if (isLoading) return <div>Carregando...</div>
+  const { data: engagementData } = useQuery({
+    queryKey: ["therapist", "analytics", "engagement", period, dateRange],
+    queryFn: async () => {
+      const params = new URLSearchParams({ period })
+      if (dateRange?.from && dateRange?.to) {
+        params.set("from", dateRange.from.toISOString())
+        params.set("to", dateRange.to.toISOString())
+      }
+
+      const res = await fetch(`/api/therapist/analytics/engagement?${params}`)
+      if (!res.ok) throw new Error("Failed to fetch engagement")
+      return res.json()
+    }
+  })
+
+  const { data: ratingsData } = useQuery({
+    queryKey: ["therapist", "analytics", "ratings", period, dateRange],
+    queryFn: async () => {
+      const params = new URLSearchParams({ period })
+      if (dateRange?.from && dateRange?.to) {
+        params.set("from", dateRange.from.toISOString())
+        params.set("to", dateRange.to.toISOString())
+      }
+
+      const res = await fetch(`/api/therapist/analytics/ratings?${params}`)
+      if (!res.ok) throw new Error("Failed to fetch ratings")
+      return res.json()
+    }
+  })
+
+  if (isLoading) {
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </DashboardShell>
+    )
+  }
 
   return (
     <DashboardShell>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-          <p className="text-muted-foreground">
-            Métricas e insights das suas sessões
-          </p>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Analytics Avançado</h1>
+            <p className="text-muted-foreground">
+              Métricas detalhadas e insights das suas sessões
+            </p>
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center gap-4">
+            <Select value={period} onValueChange={(value: "month" | "quarter" | "year") => setPeriod(value)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">Mês</SelectItem>
+                <SelectItem value="quarter">Trimestre</SelectItem>
+                <SelectItem value="year">Ano</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+            />
+          </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total de Sessões
-              </CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{data?.stats?.totalSessions}</div>
-              <p className="text-xs text-muted-foreground">
-                +{data?.stats?.sessionsThisMonth} este mês
-              </p>
-            </CardContent>
-          </Card>
+        {/* Overview Cards */}
+        <OverviewCards data={analyticsData} />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">
-                Pacientes Únicos
-              </CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{data?.stats?.uniquePatients}</div>
-            </CardContent>
-          </Card>
+        {/* Analytics Tabs */}
+        <Tabs defaultValue="engagement" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="engagement">Engajamento</TabsTrigger>
+            <TabsTrigger value="ratings">Avaliações</TabsTrigger>
+            <TabsTrigger value="sessions">Sessões</TabsTrigger>
+          </TabsList>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">
-                Taxa de Comparecimento
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {data?.stats?.attendanceRate}%
-              </div>
-            </CardContent>
-          </Card>
+          <TabsContent value="engagement" className="space-y-6">
+            <EngagementChart
+              data={engagementData}
+              period={period}
+            />
+          </TabsContent>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">
-                Avaliação Média
-              </CardTitle>
-              <Award className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {data?.stats?.averageRating?.toFixed(1) || "N/A"}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="ratings" className="space-y-6">
+            <RatingsChart
+              data={ratingsData}
+              period={period}
+            />
+          </TabsContent>
 
-        {/* Charts */}
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Sessões por mês */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Sessões por Mês</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data?.sessionsByMonth}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Categorias mais populares */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Categorias Populares</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={data?.categoryDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name} (${(percent * 100).toFixed(0)}%)`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {data?.categoryDistribution?.map((_: any, index: number) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Participantes ao longo do tempo */}
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Participantes por Sessão</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={data?.participantsOverTime}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="participants"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="sessions" className="space-y-6">
+            <SessionsBreakdown
+              data={analyticsData}
+              period={period}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardShell>
   )
 }
+

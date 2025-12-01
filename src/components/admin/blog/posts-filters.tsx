@@ -135,3 +135,4 @@ export function PostsFilters({ stats }: PostsFiltersProps) {
     </div>
   )
 }
+

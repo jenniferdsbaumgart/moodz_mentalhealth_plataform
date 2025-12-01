@@ -112,3 +112,4 @@ export const complexOperationWithToast = async (data: any) => {
     error: (error) => `Falha: ${error.message}`
   })
 }
+
