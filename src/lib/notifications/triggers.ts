@@ -1,0 +1,411 @@
+import { db } from "@/lib/db"
+import { createNotification, broadcastNotification } from "./service"
+
+/**
+ * Notifies user about upcoming session (reminder)
+ */
+export async function notifySessionReminder(sessionId: string): Promise<void> {
+  try {
+    // Get session details
+    const session = await db.groupSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        therapist: {
+          include: {
+            user: {
+              select: { name: true }
+            }
+          }
+        },
+        participants: {
+          include: {
+            user: {
+              select: { id: true, name: true }
+            }
+          }
+        }
+      }
+    })
+
+    if (!session) return
+
+    const sessionDate = new Date(session.scheduledAt)
+    const now = new Date()
+    const timeDiff = sessionDate.getTime() - now.getTime()
+    const hoursUntil = Math.floor(timeDiff / (1000 * 60 * 60))
+
+    // Notify all participants
+    const notifications = session.participants.map(participant => ({
+      userId: participant.userId,
+      type: "SESSION_REMINDER" as const,
+      title: "Lembrete de Sessão",
+      message: `Sua sessão "${session.title}" com ${session.therapist.user.name || 'Terapeuta'} começa em ${hoursUntil} hora${hoursUntil !== 1 ? 's' : ''}.`,
+      data: {
+        link: `/sessions/${sessionId}`,
+        sessionId: sessionId,
+        therapistName: session.therapist.user.name
+      }
+    }))
+
+    await Promise.all(notifications.map(notification => createNotification(notification)))
+  } catch (error) {
+    console.error("Failed to send session reminder:", error)
+  }
+}
+
+/**
+ * Notifies users when session is about to start (5 minutes before)
+ */
+export async function notifySessionStarting(sessionId: string): Promise<void> {
+  try {
+    const session = await db.groupSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        therapist: {
+          include: {
+            user: {
+              select: { name: true }
+            }
+          }
+        },
+        participants: {
+          include: {
+            user: {
+              select: { id: true, name: true }
+            }
+          }
+        }
+      }
+    })
+
+    if (!session) return
+
+    const therapistName = session.therapist.user.name || 'Terapeuta'
+
+    // Notify participants
+    await broadcastNotification(
+      session.participants.map(p => p.userId),
+      {
+        type: "SESSION_STARTING",
+        title: "Sessão Começando Agora",
+        message: `Sua sessão "${session.title}" com ${therapistName} está prestes a começar.`,
+        data: {
+          link: `/sessions/${sessionId}/room`,
+          sessionId: sessionId,
+          urgent: true
+        }
+      }
+    )
+
+    // Notify therapist
+    await createNotification({
+      userId: session.therapistId,
+      type: "SESSION_STARTING",
+      title: "Sessão Começando Agora",
+      message: `Sua sessão "${session.title}" está prestes a começar.`,
+      data: {
+        link: `/sessions/${sessionId}/room`,
+        sessionId: sessionId,
+        urgent: true
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send session starting notification:", error)
+  }
+}
+
+/**
+ * Notifies when session is cancelled
+ */
+export async function notifySessionCancelled(sessionId: string, reason?: string): Promise<void> {
+  try {
+    const session = await db.groupSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        therapist: {
+          include: {
+            user: {
+              select: { name: true }
+            }
+          }
+        },
+        participants: {
+          include: {
+            user: {
+              select: { id: true, name: true }
+            }
+          }
+        }
+      }
+    })
+
+    if (!session) return
+
+    const message = reason
+      ? `Sua sessão "${session.title}" foi cancelada. Motivo: ${reason}`
+      : `Sua sessão "${session.title}" foi cancelada.`
+
+    // Notify participants
+    await broadcastNotification(
+      session.participants.map(p => p.userId),
+      {
+        type: "SESSION_CANCELLED",
+        title: "Sessão Cancelada",
+        message: message,
+        data: {
+          link: "/sessions",
+          sessionId: sessionId,
+          reason: reason
+        }
+      }
+    )
+  } catch (error) {
+    console.error("Failed to send session cancelled notification:", error)
+  }
+}
+
+/**
+ * Notifies user when they earn a new badge
+ */
+export async function notifyNewBadge(userId: string, badgeId: string): Promise<void> {
+  try {
+    const badge = await db.badge.findUnique({
+      where: { id: badgeId }
+    })
+
+    if (!badge) return
+
+    await createNotification({
+      userId: userId,
+      type: "NEW_BADGE",
+      title: "🏆 Novo Badge Conquistado!",
+      message: `Parabéns! Você conquistou o badge "${badge.name}". ${badge.description}`,
+      data: {
+        link: "/gamification/badges",
+        badgeId: badgeId
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send new badge notification:", error)
+  }
+}
+
+/**
+ * Notifies user when their streak is at risk
+ */
+export async function notifyStreakRisk(userId: string): Promise<void> {
+  try {
+    // Get user's current streak
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      include: {
+        dailyCheckIns: {
+          orderBy: { date: 'desc' },
+          take: 1
+        }
+      }
+    })
+
+    if (!user) return
+
+    await createNotification({
+      userId: userId,
+      type: "STREAK_RISK",
+      title: "🔥 Sua sequência está em risco!",
+      message: "Você não fez check-in hoje. Mantenha sua sequência ativa!",
+      data: {
+        link: "/wellness/daily-checkin",
+        urgent: true
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send streak risk notification:", error)
+  }
+}
+
+/**
+ * Notifies user when their streak is achieved/maintained
+ */
+export async function notifyStreakAchieved(userId: string, streakCount: number): Promise<void> {
+  try {
+    await createNotification({
+      userId: userId,
+      type: "STREAK_ACHIEVED",
+      title: "🔥 Sequência Mantida!",
+      message: `Parabéns! Você manteve sua sequência de ${streakCount} dia${streakCount !== 1 ? 's' : ''} consecutivos.`,
+      data: {
+        link: "/gamification/streak",
+        streakCount: streakCount
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send streak achieved notification:", error)
+  }
+}
+
+/**
+ * Notifies post author when someone replies to their post
+ */
+export async function notifyNewReply(postId: string, commentId: string): Promise<void> {
+  try {
+    const comment = await db.comment.findUnique({
+      where: { id: commentId },
+      include: {
+        author: {
+          select: { id: true, name: true }
+        },
+        post: {
+          include: {
+            author: {
+              select: { id: true, name: true }
+            }
+          }
+        }
+      }
+    })
+
+    if (!comment || !comment.post.author.id) return
+
+    // Don't notify if user is replying to their own post
+    if (comment.author.id === comment.post.author.id) return
+
+    await createNotification({
+      userId: comment.post.author.id,
+      type: "NEW_POST_REPLY",
+      title: "💬 Nova resposta no seu post",
+      message: `${comment.author.name || 'Alguém'} respondeu ao seu post.`,
+      data: {
+        link: `/community/posts/${postId}#comment-${commentId}`,
+        postId: postId,
+        commentId: commentId,
+        replierName: comment.author.name
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send new reply notification:", error)
+  }
+}
+
+/**
+ * Notifies post author when their post receives an upvote
+ */
+export async function notifyPostUpvoted(postId: string, voterId: string): Promise<void> {
+  try {
+    const post = await db.post.findUnique({
+      where: { id: postId },
+      include: {
+        author: {
+          select: { id: true, name: true }
+        }
+      }
+    })
+
+    if (!post || !post.author.id) return
+
+    // Don't notify if user upvotes their own post
+    if (voterId === post.author.id) return
+
+    await createNotification({
+      userId: post.author.id,
+      type: "POST_UPVOTED",
+      title: "👍 Seu post foi curtido",
+      message: "Alguém curtiu seu post na comunidade.",
+      data: {
+        link: `/community/posts/${postId}`,
+        postId: postId
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send post upvoted notification:", error)
+  }
+}
+
+/**
+ * Notifies therapist when they are approved
+ */
+export async function notifyTherapistApproved(therapistId: string): Promise<void> {
+  try {
+    await createNotification({
+      userId: therapistId,
+      type: "THERAPIST_APPROVED",
+      title: "🎉 Perfil Aprovado!",
+      message: "Parabéns! Seu perfil de terapeuta foi aprovado. Você já pode começar a atender pacientes.",
+      data: {
+        link: "/therapist/dashboard"
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send therapist approved notification:", error)
+  }
+}
+
+/**
+ * Notifies therapist when they receive a new review
+ */
+export async function notifyNewReview(therapistId: string, reviewId?: string): Promise<void> {
+  try {
+    await createNotification({
+      userId: therapistId,
+      type: "NEW_REVIEW",
+      title: "⭐ Nova avaliação recebida",
+      message: "Você recebeu uma nova avaliação de um paciente.",
+      data: {
+        link: "/therapist/reviews",
+        reviewId: reviewId
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send new review notification:", error)
+  }
+}
+
+/**
+ * Notifies all users about system announcements
+ */
+export async function notifySystemAnnouncement(
+  title: string,
+  message: string,
+  data?: Record<string, any>
+): Promise<void> {
+  try {
+    // Get all users
+    const users = await db.user.findMany({
+      where: { status: 'ACTIVE' },
+      select: { id: true }
+    })
+
+    await broadcastNotification(
+      users.map(u => u.id),
+      {
+        type: "SYSTEM_ANNOUNCEMENT",
+        title: title,
+        message: message,
+        data: data
+      }
+    )
+  } catch (error) {
+    console.error("Failed to send system announcement:", error)
+  }
+}
+
+/**
+ * Notifies user about their weekly summary
+ */
+export async function notifyWeeklySummary(userId: string, summaryData: any): Promise<void> {
+  try {
+    const message = `Esta semana você teve ${summaryData.sessionsAttended || 0} sessões, ${summaryData.exercisesCompleted || 0} exercícios completados e ${summaryData.badgesEarned || 0} badges conquistados.`
+
+    await createNotification({
+      userId: userId,
+      type: "WEEKLY_SUMMARY",
+      title: "📊 Seu resumo semanal",
+      message: message,
+      data: {
+        link: "/dashboard",
+        summary: summaryData
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send weekly summary notification:", error)
+  }
+}
