@@ -1,4 +1,4 @@
-// Email templates index
+// Email templates index - Core templates
 export { SessionReminderEmail } from "./session-reminder"
 export { SessionStartingEmail } from "./session-starting"
 export { WelcomeEmail } from "./welcome"
@@ -7,12 +7,9 @@ export { WeeklySummaryEmail } from "./weekly-summary"
 export { PasswordResetEmail } from "./password-reset"
 export { NewBadgeEmail } from "./new-badge"
 
-// Re-export types
-export type { SessionReminderEmailProps } from "./session-reminder"
-export type { SessionStartingEmailProps } from "./session-starting"
-export type { WelcomeEmailProps } from "./welcome"
-export type { TherapistApprovedEmailProps } from "./therapist-approved"
-export type { WeeklySummaryEmailProps } from "./weekly-summary"
-export type { PasswordResetEmailProps } from "./password-reset"
-export type { NewBadgeEmailProps } from "./new-badge"
-
+// Email templates index - Advanced templates
+export { SessionCancelledEmail } from "./session-cancelled"
+export { NewReviewEmail } from "./new-review"
+export { ReportResolvedEmail } from "./report-resolved"
+export { AccountSuspendedEmail } from "./account-suspended"
+export { StreakRiskEmail } from "./streak-risk"
