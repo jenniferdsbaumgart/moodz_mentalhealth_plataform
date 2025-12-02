@@ -1,47 +1,38 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Bell, Check, CheckCheck } from "lucide-react"
+import { Bell, CheckCheck, Volume2, VolumeX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { usePusher } from "@/hooks/use-pusher"
 import { useSession } from "next-auth/react"
 import { NotificationItem } from "./notification-item"
+import { useNotificationsOptional } from "@/components/providers/notifications-provider"
 
 export function NotificationDropdown() {
   const { data: session } = useSession()
   const queryClient = useQueryClient()
+  const notificationsContext = useNotificationsOptional()
 
   // Fetch notifications
   const { data, isLoading } = useQuery({
     queryKey: ["notifications"],
     queryFn: async () => {
-      const response = await fetch("/api/notifications")
+      const response = await fetch("/api/notifications?limit=10")
       if (!response.ok) throw new Error("Failed to fetch notifications")
       return response.json()
     },
-    enabled: !!session?.user
+    enabled: !!session?.user,
+    refetchInterval: 60000, // Refetch every minute as fallback
   })
 
-  // Real-time updates via Pusher
-  usePusher(
-    `user-${session?.user?.id}`,
-    "notification",
-    (newNotification) => {
-      queryClient.setQueryData(["notifications"], (old: any) => ({
-        ...old,
-        notifications: [newNotification, ...(old?.notifications || [])],
-        unreadCount: (old?.unreadCount || 0) + 1
-      }))
-    }
-  )
+  // Real-time updates are now handled by NotificationsProvider
 
   // Mark all as read mutation
   const markAllReadMutation = useMutation({
@@ -114,12 +105,35 @@ export function NotificationDropdown() {
         </ScrollArea>
 
         {/* Footer */}
-        <div className="p-2 border-t">
+        <div className="p-2 border-t space-y-1">
           <Button variant="ghost" className="w-full" asChild>
             <Link href="/notifications">
               Ver todas as notificações
             </Link>
           </Button>
+          {notificationsContext && (
+            <>
+              <DropdownMenuSeparator />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-muted-foreground"
+                onClick={notificationsContext.toggleSound}
+              >
+                {notificationsContext.soundEnabled ? (
+                  <>
+                    <Volume2 className="h-4 w-4 mr-2" />
+                    Som activado
+                  </>
+                ) : (
+                  <>
+                    <VolumeX className="h-4 w-4 mr-2" />
+                    Som desactivado
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>

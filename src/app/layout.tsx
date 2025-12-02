@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/providers/session-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { NotificationsProvider } from "@/components/providers/notifications-provider";
 import { Toaster } from "sonner";
 import { SkipLink } from "@/components/accessibility/skip-link";
 import { ScreenReaderAnnouncer } from "@/components/accessibility/announcer";
@@ -43,19 +44,21 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <AuthProvider>
-              <main id="main-content">
-                {children}
-              </main>
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  style: {
-                    background: "hsl(var(--background))",
-                    color: "hsl(var(--foreground))",
-                    border: "1px solid hsl(var(--border))",
-                  },
-                }}
-              />
+              <NotificationsProvider>
+                <main id="main-content">
+                  {children}
+                </main>
+                  <Toaster
+                  position="top-right"
+                  toastOptions={{
+                    style: {
+                      background: "hsl(var(--background))",
+                      color: "hsl(var(--foreground))",
+                      border: "1px solid hsl(var(--border))",
+                    },
+                  }}
+                />
+              </NotificationsProvider>
             </AuthProvider>
           </ThemeProvider>
         </QueryProvider>
