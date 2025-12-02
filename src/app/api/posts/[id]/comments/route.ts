@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { createCommentSchema } from "@/lib/validations/community"
+import { notifyNewReply } from "@/lib/notifications/triggers"
 
 export async function GET(
   request: NextRequest,
@@ -203,6 +204,12 @@ export async function POST(
         },
       },
     })
+
+    // Notify post author about new reply (non-blocking)
+    // Only notify if commenter is not the post author
+    if (post.authorId !== session.user.id) {
+      notifyNewReply(params.id, comment.id).catch(console.error)
+    }
 
     return NextResponse.json(
       { data: { ...comment, userVote: null } },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { ApiResponse } from "@/types/user"
+import { notifySessionEnrollment } from "@/lib/notifications/triggers"
 
 interface RouteParams {
   params: { id: string }
@@ -123,6 +124,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         status: "REGISTERED",
       }
     })
+
+    // Send notification about enrollment (non-blocking)
+    notifySessionEnrollment(params.id, session.user.id).catch(console.error)
 
     return NextResponse.json({
       success: true,

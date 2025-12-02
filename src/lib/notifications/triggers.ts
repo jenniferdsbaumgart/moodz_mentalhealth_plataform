@@ -2,6 +2,114 @@ import { db } from "@/lib/db"
 import { createNotification, broadcastNotification } from "./service"
 
 /**
+ * Notifies therapist when a new session is created (for confirmation)
+ * and potentially interested patients
+ */
+export async function notifySessionCreated(sessionId: string): Promise<void> {
+  try {
+    const session = await db.groupSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        therapist: {
+          include: {
+            user: {
+              select: { id: true, name: true }
+            }
+          }
+        }
+      }
+    })
+
+    if (!session) return
+
+    const sessionDate = new Date(session.scheduledAt)
+    const formattedDate = sessionDate.toLocaleDateString("pt-BR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit"
+    })
+
+    // Notify therapist about session creation
+    await createNotification({
+      userId: session.therapist.userId,
+      type: "SYSTEM_ANNOUNCEMENT",
+      title: "✅ Sessão criada com sucesso",
+      message: `Sua sessão "${session.title}" foi agendada para ${formattedDate}.`,
+      data: {
+        link: `/therapist/sessions/${sessionId}`,
+        sessionId: sessionId
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send session created notification:", error)
+  }
+}
+
+/**
+ * Notifies therapist when a patient enrolls in their session
+ */
+export async function notifySessionEnrollment(
+  sessionId: string,
+  patientId: string
+): Promise<void> {
+  try {
+    const [session, patient] = await Promise.all([
+      db.groupSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          therapist: {
+            include: {
+              user: { select: { id: true } }
+            }
+          },
+          _count: { select: { participants: true } }
+        }
+      }),
+      db.user.findUnique({
+        where: { id: patientId },
+        include: {
+          patientProfile: { select: { name: true } }
+        }
+      })
+    ])
+
+    if (!session || !patient) return
+
+    const patientName = patient.patientProfile?.name || patient.name || "Um paciente"
+
+    // Notify therapist about new enrollment
+    await createNotification({
+      userId: session.therapist.userId,
+      type: "SYSTEM_ANNOUNCEMENT",
+      title: "👤 Nova inscrição em sessão",
+      message: `${patientName} se inscreveu na sessão "${session.title}". Total: ${session._count.participants + 1}/${session.maxParticipants} participantes.`,
+      data: {
+        link: `/therapist/sessions/${sessionId}`,
+        sessionId: sessionId,
+        patientId: patientId,
+        currentParticipants: session._count.participants + 1
+      }
+    })
+
+    // Notify patient about successful enrollment
+    await createNotification({
+      userId: patientId,
+      type: "SESSION_REMINDER",
+      title: "✅ Inscrição confirmada",
+      message: `Você está inscrito na sessão "${session.title}". Não esqueça de participar!`,
+      data: {
+        link: `/sessions/${sessionId}`,
+        sessionId: sessionId
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send session enrollment notification:", error)
+  }
+}
+
+/**
  * Notifies user about upcoming session (reminder)
  */
 export async function notifySessionReminder(sessionId: string): Promise<void> {

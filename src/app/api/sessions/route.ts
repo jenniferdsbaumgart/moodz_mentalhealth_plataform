@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { createSessionSchema } from "@/lib/validations/session"
 import { ApiResponse } from "@/types/user"
+import { notifySessionCreated } from "@/lib/notifications/triggers"
 
 export async function GET() {
   try {
@@ -110,6 +111,9 @@ export async function POST(request: NextRequest) {
         }
       },
     })
+
+    // Send notification about session creation (non-blocking)
+    notifySessionCreated(newSession.id).catch(console.error)
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { notifyPostUpvoted } from "@/lib/notifications/triggers"
 
 export async function POST(
   request: NextRequest,
@@ -93,6 +94,9 @@ export async function POST(
         where: { userId: post.authorId },
         data: { points: { increment: 2 } },
       })
+
+      // Notify post author about upvote (non-blocking)
+      notifyPostUpvoted(params.id, session.user.id).catch(console.error)
     } else if (existingVote && existingVote.value === 1 && voteValue !== 1) {
       // User removed their upvote - deduct points
       await prisma.patientProfile.update({

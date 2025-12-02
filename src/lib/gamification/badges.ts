@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db"
+import { notifyNewBadge } from "@/lib/notifications/triggers"
 
 /**
  * Service for badge verification and awarding
@@ -263,6 +264,9 @@ export class BadgeService {
               },
             })
           }
+
+          // Send notification about new badge (non-blocking)
+          notifyNewBadge(userId, badge.id).catch(console.error)
 
           awarded.push(badge.title)
         }

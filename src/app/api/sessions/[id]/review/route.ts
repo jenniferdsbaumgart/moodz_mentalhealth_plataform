@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { db as prisma } from "@/lib/db"
 import { z } from "zod"
+import { notifyNewReview } from "@/lib/notifications/triggers"
 
 // Mock storage para reviews (em produção, seria uma tabela Review)
 let mockReviews: Array<{
@@ -184,6 +185,17 @@ export async function POST(
     }
 
     mockReviews.push(newReview)
+
+    // Get therapist userId to send notification
+    const therapist = await prisma.therapistProfile.findUnique({
+      where: { id: groupSession.therapistId },
+      select: { userId: true }
+    })
+
+    // Notify therapist about new review (non-blocking)
+    if (therapist) {
+      notifyNewReview(therapist.userId, newReview.id).catch(console.error)
+    }
 
     return NextResponse.json({
       success: true,
