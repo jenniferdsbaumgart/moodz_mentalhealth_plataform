@@ -9,173 +9,215 @@ interface SearchResult {
   title: string
   description?: string
   url: string
+  relevance?: number
 }
+
+type SearchType = "post" | "session" | "user" | "blog" | "therapist"
 
 /**
  * GET /api/search
  * Global search across posts, sessions, users, blog posts, and therapists
+ * 
+ * Query params:
+ * - q: Search query (required, min 2 chars)
+ * - type: Filter by type (optional: post, session, user, blog, therapist)
+ * - limit: Max results per type (default: 10)
  */
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const { searchParams } = new URL(request.url)
     const query = searchParams.get("q")
-    const limit = parseInt(searchParams.get("limit") || "10")
+    const type = searchParams.get("type") as SearchType | null
+    const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 50)
 
     if (!query || query.length < 2) {
-      return NextResponse.json({ results: [] })
+      return NextResponse.json({ results: [], query: query || "" })
     }
 
     const results: SearchResult[] = []
     const searchTerm = query.toLowerCase()
+    const perTypeLimit = type ? limit : Math.ceil(limit / 4)
+
+    // Helper to calculate relevance score
+    const calculateRelevance = (title: string, content?: string): number => {
+      const titleLower = title.toLowerCase()
+      let score = 0
+      
+      // Exact title match
+      if (titleLower === searchTerm) score += 100
+      // Title starts with search term
+      else if (titleLower.startsWith(searchTerm)) score += 80
+      // Title contains search term
+      else if (titleLower.includes(searchTerm)) score += 60
+      // Content contains search term
+      else if (content?.toLowerCase().includes(searchTerm)) score += 40
+      
+      return score
+    }
 
     // Search posts (community)
-    try {
-      const posts = await db.post.findMany({
-        where: {
-          OR: [
-            { title: { contains: searchTerm, mode: "insensitive" } },
-            { content: { contains: searchTerm, mode: "insensitive" } },
-          ],
-          isPublished: true,
-        },
-        select: {
-          id: true,
-          title: true,
-          content: true,
-        },
-        take: 5,
-        orderBy: { createdAt: "desc" },
-      })
-
-      posts.forEach((post) => {
-        results.push({
-          id: post.id,
-          type: "post",
-          title: post.title,
-          description: post.content.substring(0, 100) + (post.content.length > 100 ? "..." : ""),
-          url: `/community/posts/${post.id}`,
+    if (!type || type === "post") {
+      try {
+        const posts = await db.post.findMany({
+          where: {
+            OR: [
+              { title: { contains: searchTerm, mode: "insensitive" } },
+              { content: { contains: searchTerm, mode: "insensitive" } },
+            ],
+            isPublished: true,
+          },
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            category: { select: { name: true } },
+          },
+          take: perTypeLimit,
+          orderBy: { createdAt: "desc" },
         })
-      })
-    } catch (e) {
-      console.error("Error searching posts:", e)
+
+        posts.forEach((post) => {
+          results.push({
+            id: post.id,
+            type: "post",
+            title: post.title,
+            description: `${post.category?.name || "Comunidade"} • ${post.content.slice(0, 80)}...`,
+            url: `/community/posts/${post.id}`,
+            relevance: calculateRelevance(post.title, post.content),
+          })
+        })
+      } catch (e) {
+        console.error("Error searching posts:", e)
+      }
     }
 
     // Search sessions (upcoming)
-    try {
-      const sessions = await db.groupSession.findMany({
-        where: {
-          OR: [
-            { title: { contains: searchTerm, mode: "insensitive" } },
-            { description: { contains: searchTerm, mode: "insensitive" } },
-          ],
-          status: "SCHEDULED",
-          scheduledAt: { gte: new Date() },
-        },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          scheduledAt: true,
-          therapist: {
-            include: {
-              user: { select: { name: true } },
+    if (!type || type === "session") {
+      try {
+        const sessions = await db.groupSession.findMany({
+          where: {
+            OR: [
+              { title: { contains: searchTerm, mode: "insensitive" } },
+              { description: { contains: searchTerm, mode: "insensitive" } },
+            ],
+            status: "SCHEDULED",
+            scheduledAt: { gte: new Date() },
+          },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            scheduledAt: true,
+            category: true,
+            therapist: {
+              include: {
+                user: { select: { name: true } },
+              },
             },
           },
-        },
-        take: 5,
-        orderBy: { scheduledAt: "asc" },
-      })
+          take: perTypeLimit,
+          orderBy: { scheduledAt: "asc" },
+        })
 
-      sessions.forEach((session) => {
-        const date = new Date(session.scheduledAt).toLocaleDateString("pt-BR", {
-          day: "2-digit",
-          month: "short",
-          hour: "2-digit",
-          minute: "2-digit",
+        sessions.forEach((session) => {
+          const date = new Date(session.scheduledAt).toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+          results.push({
+            id: session.id,
+            type: "session",
+            title: session.title,
+            description: `${session.therapist.user.name || "Terapeuta"} • ${date}`,
+            url: `/sessions/${session.id}`,
+            relevance: calculateRelevance(session.title, session.description),
+          })
         })
-        results.push({
-          id: session.id,
-          type: "session",
-          title: session.title,
-          description: `${date} • ${session.therapist.user.name || "Terapeuta"}`,
-          url: `/sessions/${session.id}`,
-        })
-      })
-    } catch (e) {
-      console.error("Error searching sessions:", e)
+      } catch (e) {
+        console.error("Error searching sessions:", e)
+      }
     }
 
     // Search therapists (verified only)
-    try {
-      const therapists = await db.therapistProfile.findMany({
-        where: {
-          isVerified: true,
-          OR: [
-            { user: { name: { contains: searchTerm, mode: "insensitive" } } },
-            { bio: { contains: searchTerm, mode: "insensitive" } },
-            { specialties: { hasSome: [searchTerm] } },
-          ],
-        },
-        select: {
-          id: true,
-          userId: true,
-          bio: true,
-          specialties: true,
-          user: { select: { name: true, image: true } },
-        },
-        take: 5,
-      })
-
-      therapists.forEach((therapist) => {
-        results.push({
-          id: therapist.id,
-          type: "therapist",
-          title: therapist.user.name || "Terapeuta",
-          description: therapist.specialties.slice(0, 3).join(", "),
-          url: `/therapists/${therapist.userId}`,
+    if (!type || type === "therapist") {
+      try {
+        const therapists = await db.therapistProfile.findMany({
+          where: {
+            isVerified: true,
+            OR: [
+              { user: { name: { contains: searchTerm, mode: "insensitive" } } },
+              { bio: { contains: searchTerm, mode: "insensitive" } },
+              { specialties: { hasSome: [searchTerm] } },
+            ],
+          },
+          select: {
+            id: true,
+            userId: true,
+            bio: true,
+            specialties: true,
+            user: { select: { name: true, image: true } },
+          },
+          take: perTypeLimit,
         })
-      })
-    } catch (e) {
-      console.error("Error searching therapists:", e)
+
+        therapists.forEach((therapist) => {
+          const name = therapist.user.name || "Terapeuta"
+          results.push({
+            id: therapist.id,
+            type: "therapist",
+            title: name,
+            description: therapist.specialties.slice(0, 3).join(", ") || therapist.bio?.slice(0, 80),
+            url: `/therapists/${therapist.userId}`,
+            relevance: calculateRelevance(name, therapist.bio || ""),
+          })
+        })
+      } catch (e) {
+        console.error("Error searching therapists:", e)
+      }
     }
 
     // Search blog posts
-    try {
-      const blogPosts = await db.blogPost.findMany({
-        where: {
-          OR: [
-            { title: { contains: searchTerm, mode: "insensitive" } },
-            { content: { contains: searchTerm, mode: "insensitive" } },
-          ],
-          published: true,
-        },
-        select: {
-          id: true,
-          slug: true,
-          title: true,
-          excerpt: true,
-        },
-        take: 5,
-        orderBy: { publishedAt: "desc" },
-      })
-
-      blogPosts.forEach((post) => {
-        results.push({
-          id: post.id,
-          type: "blog",
-          title: post.title,
-          description: post.excerpt || undefined,
-          url: `/blog/${post.slug}`,
+    if (!type || type === "blog") {
+      try {
+        const blogPosts = await db.blogPost.findMany({
+          where: {
+            OR: [
+              { title: { contains: searchTerm, mode: "insensitive" } },
+              { content: { contains: searchTerm, mode: "insensitive" } },
+            ],
+            published: true,
+          },
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            excerpt: true,
+          },
+          take: perTypeLimit,
+          orderBy: { publishedAt: "desc" },
         })
-      })
-    } catch (e) {
-      console.error("Error searching blog posts:", e)
+
+        blogPosts.forEach((post) => {
+          results.push({
+            id: post.id,
+            type: "blog",
+            title: post.title,
+            description: post.excerpt || undefined,
+            url: `/blog/${post.slug}`,
+            relevance: calculateRelevance(post.title, post.excerpt || ""),
+          })
+        })
+      } catch (e) {
+        console.error("Error searching blog posts:", e)
+      }
     }
 
     // Search users (only for admins)
     const userRole = (session?.user as any)?.role
-    if (userRole === "ADMIN" || userRole === "SUPER_ADMIN") {
+    if ((!type || type === "user") && (userRole === "ADMIN" || userRole === "SUPER_ADMIN")) {
       try {
         const users = await db.user.findMany({
           where: {
@@ -189,17 +231,20 @@ export async function GET(request: NextRequest) {
             name: true,
             email: true,
             role: true,
+            status: true,
           },
-          take: 5,
+          take: perTypeLimit,
         })
 
         users.forEach((user) => {
+          const displayName = user.name || user.email
           results.push({
             id: user.id,
             type: "user",
-            title: user.name || user.email,
-            description: `${user.role} • ${user.email}`,
-            url: `/admin/users?search=${user.id}`,
+            title: displayName,
+            description: `${user.role} • ${user.email}${user.status !== "ACTIVE" ? ` • ${user.status}` : ""}`,
+            url: `/admin/users?search=${user.email}`,
+            relevance: calculateRelevance(displayName, user.email),
           })
         })
       } catch (e) {
@@ -207,17 +252,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Sort results by relevance (exact matches first)
+    // Sort results by relevance (higher score first, then alphabetically)
     const sortedResults = results.sort((a, b) => {
-      const aExact = a.title.toLowerCase().includes(searchTerm) ? 0 : 1
-      const bExact = b.title.toLowerCase().includes(searchTerm) ? 0 : 1
-      return aExact - bExact
+      // First by relevance score
+      const relevanceDiff = (b.relevance || 0) - (a.relevance || 0)
+      if (relevanceDiff !== 0) return relevanceDiff
+      
+      // Then alphabetically by title
+      return a.title.localeCompare(b.title)
     })
 
+    // Remove relevance from response (internal use only)
+    const cleanResults = sortedResults.slice(0, limit).map(({ relevance, ...rest }) => rest)
+
     return NextResponse.json({
-      results: sortedResults.slice(0, limit),
+      results: cleanResults,
       total: sortedResults.length,
       query,
+      type: type || "all",
     })
   } catch (error) {
     console.error("Search error:", error)
@@ -227,4 +279,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
