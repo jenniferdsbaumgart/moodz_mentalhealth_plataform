@@ -8,6 +8,7 @@ import { NotificationsProvider } from "@/components/providers/notifications-prov
 import { Toaster } from "sonner";
 import { SkipLink } from "@/components/accessibility/skip-link";
 import { ScreenReaderAnnouncer } from "@/components/accessibility/announcer";
+import { CommandPalette } from "@/components/search/command-palette";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,7 +49,8 @@ export default function RootLayout({
                 <main id="main-content">
                   {children}
                 </main>
-                  <Toaster
+                <CommandPalette />
+                <Toaster
                   position="top-right"
                   toastOptions={{
                     style: {
