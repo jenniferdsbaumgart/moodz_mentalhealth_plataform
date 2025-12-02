@@ -37,6 +37,8 @@ const settingsSchema = z.object({
   maxSessionParticipants: z.number().min(2).max(50),
   maxPostsPerDay: z.number().min(1).max(100),
   defaultSessionDuration: z.number().min(15).max(180),
+  maxUploadSizeMB: z.number().min(1).max(100),
+  maxSessionsPerTherapist: z.number().min(1).max(100),
 })
 
 type SettingsForm = z.infer<typeof settingsSchema>
@@ -58,6 +60,8 @@ export function SystemSettingsForm({ settings }: SystemSettingsFormProps) {
       maxSessionParticipants: settings.maxSessionParticipants,
       maxPostsPerDay: settings.maxPostsPerDay,
       defaultSessionDuration: settings.defaultSessionDuration,
+      maxUploadSizeMB: settings.maxUploadSizeMB,
+      maxSessionsPerTherapist: settings.maxSessionsPerTherapist,
     },
   })
 
@@ -221,6 +225,46 @@ export function SystemSettingsForm({ settings }: SystemSettingsFormProps) {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="maxUploadSizeMB"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tamanho Máx. Upload</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormDescription>Em MB (1-100)</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="maxSessionsPerTherapist"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Máx. Sessões por Terapeuta</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormDescription>Por semana (1-100)</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
             <Button type="submit" disabled={isLoading} className="w-full">
               {isLoading ? (
@@ -238,4 +282,5 @@ export function SystemSettingsForm({ settings }: SystemSettingsFormProps) {
     </Card>
   )
 }
+
 

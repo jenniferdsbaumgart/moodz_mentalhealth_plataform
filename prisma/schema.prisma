@@ -383,15 +383,53 @@ model AuditLog {
 }
 
 model SystemSettings {
-  id                    String   @id @default("system")
-  maintenanceMode       Boolean  @default(false)
-  maintenanceMessage    String?
-  allowNewRegistrations Boolean  @default(true)
-  maxSessionParticipants Int     @default(12)
-  maxPostsPerDay        Int      @default(10)
-  defaultSessionDuration Int     @default(60) // minutos
-  updatedAt             DateTime @updatedAt
-  updatedBy             String?
+  id                     String   @id @default("system")
+  maintenanceMode        Boolean  @default(false)
+  maintenanceMessage     String?
+  allowNewRegistrations  Boolean  @default(true)
+  maxSessionParticipants Int      @default(12)
+  maxPostsPerDay         Int      @default(10)
+  defaultSessionDuration Int      @default(60) // minutos
+  maxUploadSizeMB        Int      @default(10) // MB
+  maxSessionsPerTherapist Int     @default(20) // per week
+  updatedAt              DateTime @updatedAt
+  updatedBy              String?
+}
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String?
+  enabled     Boolean  @default(false)
+  enabledFor  String[] // Role names: ["PATIENT", "THERAPIST", "ADMIN"]
+  betaOnly    Boolean  @default(false)
+  rolloutPercentage Int @default(100) // 0-100 for gradual rollout
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@index([enabled])
+}
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  level     LogLevel
+  source    String   // "cron", "api", "auth", "email", etc
+  message   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([level])
+  @@index([source])
+  @@index([createdAt])
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
 }
 
 enum BlogPostStatus {
