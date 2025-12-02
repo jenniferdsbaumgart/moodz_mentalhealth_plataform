@@ -10,7 +10,21 @@ import {
   Monitor,
   Loader2,
   ChevronLeft,
-  Info
+  Info,
+  PlayCircle,
+  Calendar,
+  MessageSquare,
+  Trophy,
+  Megaphone,
+  AlertTriangle,
+  Check,
+  Star,
+  ThumbsUp,
+  Clock,
+  Zap,
+  Users,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -18,45 +32,147 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { Badge } from "@/components/ui/badge"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
+import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
-// Notification type categories
-const NOTIFICATION_CATEGORIES = [
+// Enhanced notification preferences with icons and previews
+const NOTIFICATION_PREFERENCES = [
   {
-    title: "Sessões",
-    description: "Notificações relacionadas às suas sessões de terapia",
+    category: "Sessões",
+    icon: Calendar,
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
     types: [
-      { type: "SESSION_REMINDER", label: "Lembretes de sessão", description: "Receba lembretes antes das sessões" },
-      { type: "SESSION_STARTING", label: "Sessão começando", description: "Alerta quando a sessão está prestes a começar" },
-      { type: "SESSION_CANCELLED", label: "Sessão cancelada", description: "Aviso quando uma sessão é cancelada" },
+      {
+        type: "SESSION_REMINDER",
+        label: "Lembretes de sessão",
+        description: "Receba avisos 1 hora e 5 minutos antes das sessões",
+        icon: Clock,
+        preview: "Sua sessão de terapia começa em 1 hora. Prepare-se!",
+        defaultChannels: { email: true, push: true, inApp: true }
+      },
+      {
+        type: "SESSION_STARTING",
+        label: "Sessão iniciando",
+        description: "Aviso quando a sessão está prestes a começar",
+        icon: Zap,
+        preview: "A sessão está começando agora! Clique para entrar.",
+        defaultChannels: { email: false, push: true, inApp: true }
+      },
+      {
+        type: "SESSION_CANCELLED",
+        label: "Sessão cancelada",
+        description: "Notificação quando uma sessão é cancelada",
+        icon: AlertTriangle,
+        preview: "Infelizmente, sua sessão foi cancelada. Veja outras opções.",
+        defaultChannels: { email: true, push: true, inApp: true }
+      }
     ]
   },
   {
-    title: "Mensagens",
-    description: "Notificações de mensagens e interações",
+    category: "Conquistas",
+    icon: Trophy,
+    color: "text-yellow-600",
+    bgColor: "bg-yellow-50",
     types: [
-      { type: "NEW_MESSAGE", label: "Novas mensagens", description: "Quando você recebe uma nova mensagem" },
-      { type: "NEW_POST_REPLY", label: "Respostas em posts", description: "Quando alguém responde seu post" },
-      { type: "POST_UPVOTED", label: "Upvotes", description: "Quando seu post recebe um upvote" },
+      {
+        type: "NEW_BADGE",
+        label: "Novos badges",
+        description: "Quando você conquista um novo badge",
+        icon: Trophy,
+        preview: "🏆 Parabéns! Você conquistou o badge 'Primeira Sessão'!",
+        defaultChannels: { email: false, push: true, inApp: true }
+      },
+      {
+        type: "STREAK_RISK",
+        label: "Streak em risco",
+        description: "Lembrete quando seu streak está prestes a zerar",
+        icon: AlertTriangle,
+        preview: "🔥 Seu streak de 7 dias está em risco! Complete uma atividade hoje.",
+        defaultChannels: { email: true, push: true, inApp: true }
+      },
+      {
+        type: "STREAK_ACHIEVED",
+        label: "Streak mantido",
+        description: "Parabéns por manter seu streak",
+        icon: Check,
+        preview: "🎉 Incrível! Você manteve seu streak por mais um dia!",
+        defaultChannels: { email: false, push: false, inApp: true }
+      }
     ]
   },
   {
-    title: "Conquistas",
-    description: "Notificações sobre seu progresso e conquistas",
+    category: "Comunidade",
+    icon: Users,
+    color: "text-green-600",
+    bgColor: "bg-green-50",
     types: [
-      { type: "NEW_BADGE", label: "Novos badges", description: "Quando você conquista um novo badge" },
-      { type: "STREAK_RISK", label: "Risco de streak", description: "Alerta quando sua streak está em risco" },
-      { type: "STREAK_ACHIEVED", label: "Streak alcançado", description: "Quando você mantém sua streak" },
+      {
+        type: "NEW_POST_REPLY",
+        label: "Respostas nos posts",
+        description: "Quando alguém responde seu post",
+        icon: MessageSquare,
+        preview: "Alguém respondeu ao seu post: 'Obrigado por compartilhar!'",
+        defaultChannels: { email: true, push: true, inApp: true }
+      },
+      {
+        type: "POST_UPVOTED",
+        label: "Upvotes",
+        description: "Quando seu post recebe upvotes",
+        icon: ThumbsUp,
+        preview: "Seu post recebeu 5 novos upvotes!",
+        defaultChannels: { email: false, push: false, inApp: true }
+      },
+      {
+        type: "NEW_MESSAGE",
+        label: "Novas mensagens",
+        description: "Mensagens no chat de sessão",
+        icon: MessageSquare,
+        preview: "Dr. Silva enviou uma mensagem: 'Olá, como você está?'",
+        defaultChannels: { email: false, push: true, inApp: true }
+      }
     ]
   },
   {
-    title: "Sistema",
-    description: "Notificações administrativas e do sistema",
+    category: "Sistema",
+    icon: Megaphone,
+    color: "text-purple-600",
+    bgColor: "bg-purple-50",
     types: [
-      { type: "THERAPIST_APPROVED", label: "Aprovação de terapeuta", description: "Status da aprovação como terapeuta" },
-      { type: "NEW_REVIEW", label: "Novas avaliações", description: "Quando você recebe uma avaliação" },
-      { type: "SYSTEM_ANNOUNCEMENT", label: "Anúncios do sistema", description: "Comunicados importantes da plataforma" },
-      { type: "WEEKLY_SUMMARY", label: "Resumo semanal", description: "Seu resumo semanal de atividades" },
+      {
+        type: "WEEKLY_SUMMARY",
+        label: "Resumo semanal",
+        description: "Relatório semanal de atividades",
+        icon: Calendar,
+        preview: "📊 Sua semana: 3 sessões, 2 badges conquistados, 15 pontos!",
+        defaultChannels: { email: true, push: false, inApp: false }
+      },
+      {
+        type: "SYSTEM_ANNOUNCEMENT",
+        label: "Anúncios do sistema",
+        description: "Novidades e atualizações da plataforma",
+        icon: Megaphone,
+        preview: "📢 Nova funcionalidade: Agora você pode agendar sessões recorrentes!",
+        defaultChannels: { email: true, push: true, inApp: true }
+      },
+      {
+        type: "THERAPIST_APPROVED",
+        label: "Aprovação de terapeuta",
+        description: "Status da aprovação como terapeuta",
+        icon: Check,
+        preview: "✅ Seu perfil de terapeuta foi aprovado! Comece a atender.",
+        defaultChannels: { email: true, push: true, inApp: true }
+      },
+      {
+        type: "NEW_REVIEW",
+        label: "Novas avaliações",
+        description: "Quando você recebe uma avaliação",
+        icon: Star,
+        preview: "⭐ Você recebeu uma avaliação de 5 estrelas!",
+        defaultChannels: { email: true, push: true, inApp: true }
+      }
     ]
   },
 ]
@@ -73,6 +189,10 @@ export default function NotificationPreferencesPage() {
   const { data: session } = useSession()
   const queryClient = useQueryClient()
   const { permission, isSubscribed, subscribe, unsubscribe, isLoading: pushLoading } = usePushNotifications()
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(
+    NOTIFICATION_PREFERENCES.map(c => c.category)
+  )
+  const [testingType, setTestingType] = useState<string | null>(null)
 
   // Fetch preferences
   const { data, isLoading } = useQuery<{ preferences: Preferences }>({
@@ -97,7 +217,6 @@ export default function NotificationPreferencesPage() {
       return response.json()
     },
     onMutate: async ({ type, channel, enabled }) => {
-      // Optimistic update
       await queryClient.cancelQueries({ queryKey: ["notification-preferences"] })
       const previous = queryClient.getQueryData<{ preferences: Preferences }>(["notification-preferences"])
 
@@ -121,6 +240,39 @@ export default function NotificationPreferencesPage() {
       if (context?.previous) {
         queryClient.setQueryData(["notification-preferences"], context.previous)
       }
+      toast.error("Erro ao atualizar preferência")
+    }
+  })
+
+  // Test notification mutation
+  const testMutation = useMutation({
+    mutationFn: async (type: string) => {
+      setTestingType(type)
+      const response = await fetch("/api/notifications/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type })
+      })
+      if (!response.ok) throw new Error("Failed to send test notification")
+      return response.json()
+    },
+    onSuccess: (data) => {
+      const channels = []
+      if (data.channels?.inApp) channels.push("In-App")
+      if (data.channels?.push) channels.push("Push")
+      if (data.channels?.email) channels.push("Email")
+      
+      toast.success(`Notificação de teste enviada`, {
+        description: channels.length > 0 
+          ? `Canais: ${channels.join(", ")}`
+          : "Nenhum canal ativo para este tipo"
+      })
+    },
+    onError: () => {
+      toast.error("Erro ao enviar notificação de teste")
+    },
+    onSettled: () => {
+      setTestingType(null)
     }
   })
 
@@ -133,9 +285,23 @@ export default function NotificationPreferencesPage() {
   const handlePushToggle = async () => {
     if (isSubscribed) {
       await unsubscribe()
+      toast.success("Notificações push desativadas")
     } else {
       await subscribe()
+      toast.success("Notificações push ativadas")
     }
+  }
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    )
+  }
+
+  const handleTestNotification = (type: string) => {
+    testMutation.mutate(type)
   }
 
   return (
@@ -204,9 +370,9 @@ export default function NotificationPreferencesPage() {
           </div>
 
           {permission === "default" && !isSubscribed && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg flex items-start gap-2">
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg flex items-start gap-2">
               <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-blue-800">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
                 Ao ativar, seu navegador pedirá permissão para enviar notificações.
               </p>
             </div>
@@ -217,18 +383,27 @@ export default function NotificationPreferencesPage() {
       {/* Channel Legend */}
       <Card className="mb-6">
         <CardContent className="py-4">
-          <div className="flex flex-wrap items-center gap-6 text-sm">
-            <div className="flex items-center gap-2">
-              <Monitor className="h-4 w-4 text-muted-foreground" />
-              <span>In-App</span>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <Monitor className="h-4 w-4 text-muted-foreground" />
+                <span>In-App</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Smartphone className="h-4 w-4 text-muted-foreground" />
+                <span>Push</span>
+                {!isSubscribed && (
+                  <Badge variant="secondary" className="text-xs">Desativado</Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <span>Email</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Smartphone className="h-4 w-4 text-muted-foreground" />
-              <span>Push</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <span>Email</span>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <PlayCircle className="h-4 w-4" />
+              <span>Clique no botão de teste para experimentar</span>
             </div>
           </div>
         </CardContent>
@@ -240,73 +415,179 @@ export default function NotificationPreferencesPage() {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="space-y-6">
-          {NOTIFICATION_CATEGORIES.map((category) => (
-            <Card key={category.title}>
-              <CardHeader>
-                <CardTitle>{category.title}</CardTitle>
-                <CardDescription>{category.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {category.types.map((notifType, index) => {
-                    const pref = preferences[notifType.type] || { email: true, push: true, inApp: true }
+        <div className="space-y-4">
+          {NOTIFICATION_PREFERENCES.map((category) => {
+            const CategoryIcon = category.icon
+            const isExpanded = expandedCategories.includes(category.category)
 
-                    return (
-                      <div key={notifType.type}>
-                        {index > 0 && <Separator className="my-4" />}
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <Label className="text-base font-medium">
-                              {notifType.label}
-                            </Label>
-                            <p className="text-sm text-muted-foreground">
-                              {notifType.description}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            {/* In-App */}
-                            <div className="flex items-center gap-2">
-                              <Monitor className="h-4 w-4 text-muted-foreground" />
-                              <Switch
-                                checked={pref.inApp}
-                                onCheckedChange={(checked) => handleToggle(notifType.type, "inApp", checked)}
-                                disabled={updateMutation.isPending}
-                              />
-                            </div>
-
-                            {/* Push */}
-                            <div className="flex items-center gap-2">
-                              <Smartphone className="h-4 w-4 text-muted-foreground" />
-                              <Switch
-                                checked={pref.push}
-                                onCheckedChange={(checked) => handleToggle(notifType.type, "push", checked)}
-                                disabled={updateMutation.isPending || !isSubscribed}
-                              />
-                            </div>
-
-                            {/* Email */}
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-4 w-4 text-muted-foreground" />
-                              <Switch
-                                checked={pref.email}
-                                onCheckedChange={(checked) => handleToggle(notifType.type, "email", checked)}
-                                disabled={updateMutation.isPending}
-                              />
-                            </div>
-                          </div>
-                        </div>
+            return (
+              <Card key={category.category}>
+                <CardHeader 
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => toggleCategory(category.category)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={cn("p-2 rounded-lg", category.bgColor)}>
+                        <CategoryIcon className={cn("h-5 w-5", category.color)} />
                       </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                      <div>
+                        <CardTitle className="text-lg">{category.category}</CardTitle>
+                        <CardDescription className="text-sm">
+                          {category.types.length} tipos de notificação
+                        </CardDescription>
+                      </div>
+                    </div>
+                    {isExpanded ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                </CardHeader>
+
+                {isExpanded && (
+                  <CardContent className="pt-0">
+                    <div className="space-y-6">
+                      {category.types.map((notifType, index) => {
+                        const pref = preferences[notifType.type] || { email: true, push: true, inApp: true }
+                        const TypeIcon = notifType.icon
+                        const isTesting = testingType === notifType.type
+
+                        return (
+                          <div key={notifType.type}>
+                            {index > 0 && <Separator className="my-6" />}
+                            
+                            <div className="space-y-4">
+                              {/* Header with label and test button */}
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-start gap-3">
+                                  <div className={cn("p-1.5 rounded", category.bgColor)}>
+                                    <TypeIcon className={cn("h-4 w-4", category.color)} />
+                                  </div>
+                                  <div>
+                                    <Label className="text-base font-medium">
+                                      {notifType.label}
+                                    </Label>
+                                    <p className="text-sm text-muted-foreground">
+                                      {notifType.description}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleTestNotification(notifType.type)}
+                                  disabled={isTesting}
+                                  className="flex-shrink-0"
+                                >
+                                  {isTesting ? (
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  ) : (
+                                    <PlayCircle className="h-4 w-4 mr-2" />
+                                  )}
+                                  Testar
+                                </Button>
+                              </div>
+
+                              {/* Preview */}
+                              <div className={cn(
+                                "p-3 rounded-lg border text-sm",
+                                category.bgColor,
+                                "border-transparent"
+                              )}>
+                                <p className="text-muted-foreground italic">
+                                  Preview: "{notifType.preview}"
+                                </p>
+                              </div>
+
+                              {/* Channel toggles */}
+                              <div className="flex flex-wrap items-center gap-6 pl-9">
+                                {/* In-App */}
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    id={`${notifType.type}-inApp`}
+                                    checked={pref.inApp}
+                                    onCheckedChange={(checked) => handleToggle(notifType.type, "inApp", checked)}
+                                    disabled={updateMutation.isPending}
+                                  />
+                                  <Label 
+                                    htmlFor={`${notifType.type}-inApp`}
+                                    className="flex items-center gap-1.5 text-sm cursor-pointer"
+                                  >
+                                    <Monitor className="h-4 w-4 text-muted-foreground" />
+                                    In-App
+                                  </Label>
+                                </div>
+
+                                {/* Push */}
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    id={`${notifType.type}-push`}
+                                    checked={pref.push}
+                                    onCheckedChange={(checked) => handleToggle(notifType.type, "push", checked)}
+                                    disabled={updateMutation.isPending || !isSubscribed}
+                                  />
+                                  <Label 
+                                    htmlFor={`${notifType.type}-push`}
+                                    className={cn(
+                                      "flex items-center gap-1.5 text-sm cursor-pointer",
+                                      !isSubscribed && "opacity-50"
+                                    )}
+                                  >
+                                    <Smartphone className="h-4 w-4 text-muted-foreground" />
+                                    Push
+                                    {!isSubscribed && (
+                                      <span className="text-xs text-muted-foreground">(desativado)</span>
+                                    )}
+                                  </Label>
+                                </div>
+
+                                {/* Email */}
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    id={`${notifType.type}-email`}
+                                    checked={pref.email}
+                                    onCheckedChange={(checked) => handleToggle(notifType.type, "email", checked)}
+                                    disabled={updateMutation.isPending}
+                                  />
+                                  <Label 
+                                    htmlFor={`${notifType.type}-email`}
+                                    className="flex items-center gap-1.5 text-sm cursor-pointer"
+                                  >
+                                    <Mail className="h-4 w-4 text-muted-foreground" />
+                                    Email
+                                  </Label>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            )
+          })}
         </div>
       )}
+
+      {/* Footer info */}
+      <div className="mt-8 p-4 bg-muted/50 rounded-lg">
+        <div className="flex items-start gap-3">
+          <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-muted-foreground">
+            <p className="font-medium text-foreground mb-1">Sobre as notificações</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li><strong>In-App:</strong> Aparecem no sino de notificações dentro da plataforma</li>
+              <li><strong>Push:</strong> Aparecem no seu dispositivo mesmo quando não está no site</li>
+              <li><strong>Email:</strong> Enviadas para o email cadastrado na sua conta</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
-
