@@ -27,13 +27,15 @@ import {
   ChevronUp,
   UserPlus,
   Target,
-  Stethoscope
+  Stethoscope,
+  CalendarClock
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
@@ -441,6 +443,9 @@ export default function NotificationPreferencesPage() {
         </CardContent>
       </Card>
 
+      {/* Email Digest Settings */}
+      <DigestSettings />
+
       {/* Channel Legend */}
       <Card className="mb-6">
         <CardContent className="py-4">
@@ -652,10 +657,135 @@ export default function NotificationPreferencesPage() {
               <li><strong>In-App:</strong> Aparecem no sino de notificações dentro da plataforma</li>
               <li><strong>Push:</strong> Aparecem no seu dispositivo mesmo quando não está no site</li>
               <li><strong>Email:</strong> Enviadas para o email cadastrado na sua conta</li>
+              <li><strong>Digest:</strong> Agrupa notificações por email em vez de enviar individualmente</li>
             </ul>
           </div>
         </div>
       </div>
     </div>
+  )
+}
+
+// Digest Settings Component
+function DigestSettings() {
+  const queryClient = useQueryClient()
+
+  // Fetch current digest setting
+  const { data, isLoading } = useQuery<{ digest: string }>({
+    queryKey: ["notification-digest"],
+    queryFn: async () => {
+      const response = await fetch("/api/notifications/digest")
+      if (!response.ok) throw new Error("Failed to fetch digest setting")
+      return response.json()
+    }
+  })
+
+  // Update digest mutation
+  const updateMutation = useMutation({
+    mutationFn: async (digest: string) => {
+      const response = await fetch("/api/notifications/digest", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ digest })
+      })
+      if (!response.ok) throw new Error("Failed to update digest setting")
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notification-digest"] })
+      toast.success("Preferência de resumo atualizada")
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar preferência")
+    }
+  })
+
+  const currentDigest = data?.digest || "IMMEDIATE"
+
+  const digestOptions = [
+    {
+      value: "IMMEDIATE",
+      label: "Imediato",
+      description: "Receba emails de notificação assim que acontecerem",
+      icon: Zap
+    },
+    {
+      value: "DAILY",
+      label: "Resumo diário",
+      description: "Receba um email com todas as notificações às 8h da manhã",
+      icon: Calendar
+    },
+    {
+      value: "WEEKLY",
+      label: "Resumo semanal",
+      description: "Receba um email com todas as notificações às segundas-feiras às 9h",
+      icon: CalendarClock
+    }
+  ]
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Mail className="h-5 w-5" />
+          Frequência de Emails
+        </CardTitle>
+        <CardDescription>
+          Escolha como deseja receber notificações por email
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <RadioGroup
+            value={currentDigest}
+            onValueChange={(value) => updateMutation.mutate(value)}
+            className="space-y-3"
+            disabled={updateMutation.isPending}
+          >
+            {digestOptions.map((option) => {
+              const Icon = option.icon
+              return (
+                <div
+                  key={option.value}
+                  className={cn(
+                    "flex items-start space-x-3 p-4 rounded-lg border transition-colors cursor-pointer",
+                    currentDigest === option.value
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted/50"
+                  )}
+                  onClick={() => !updateMutation.isPending && updateMutation.mutate(option.value)}
+                >
+                  <RadioGroupItem value={option.value} id={option.value} className="mt-1" />
+                  <div className="flex-1">
+                    <Label
+                      htmlFor={option.value}
+                      className="flex items-center gap-2 text-base font-medium cursor-pointer"
+                    >
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      {option.label}
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {option.description}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </RadioGroup>
+        )}
+
+        <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg flex items-start gap-2">
+          <Info className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            O resumo agrupa apenas notificações por <strong>email</strong>. 
+            Notificações in-app e push continuam sendo enviadas imediatamente.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

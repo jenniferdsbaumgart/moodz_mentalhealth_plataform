@@ -13,3 +13,6 @@ export { NewReviewEmail } from "./new-review"
 export { ReportResolvedEmail } from "./report-resolved"
 export { AccountSuspendedEmail } from "./account-suspended"
 export { StreakRiskEmail } from "./streak-risk"
+
+// Email templates index - Digest
+export { NotificationDigestEmail } from "./notification-digest"

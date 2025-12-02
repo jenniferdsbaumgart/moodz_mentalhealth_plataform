@@ -24,6 +24,14 @@
     {
       "path": "/api/cron/check-session-status",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/notification-digest?type=daily",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/notification-digest?type=weekly",
+      "schedule": "0 9 * * 1"
     }
   ]
 }

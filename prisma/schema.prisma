@@ -62,10 +62,11 @@ model User {
   notesAbout     PatientNote[]     @relation("NotesAbout")
 
   // Notifications
-  notifications        Notification[]
-  notificationPreferences NotificationPreference[]
-  pushSubscriptions     PushSubscription[]
-  sentEmails           EmailLog[]
+  notifications            Notification[]
+  notificationPreferences  NotificationPreference[]
+  pushSubscriptions        PushSubscription[]
+  sentEmails               EmailLog[]
+  notificationDigest       NotificationDigest @default(IMMEDIATE)
 }
 
 model Account {
@@ -960,6 +961,12 @@ enum EmailStatus {
   SENT
   FAILED
   BOUNCED
+}
+
+enum NotificationDigest {
+  IMMEDIATE   // Send notifications immediately (default)
+  DAILY       // Send daily digest at 8:00 AM
+  WEEKLY      // Send weekly digest on Monday at 9:00 AM
 }
 
 model Notification {
