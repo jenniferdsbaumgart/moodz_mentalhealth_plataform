@@ -237,3 +237,4 @@ export function ExerciseFilters({ onFiltersChange, className }: ExerciseFiltersP
 }
 
 
+

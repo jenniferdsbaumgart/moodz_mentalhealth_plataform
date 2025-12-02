@@ -236,3 +236,4 @@ export function createUnsubscribeUrl(userId: string, type?: string): string {
   if (type) params.set("type", type)
   return `${baseUrl}/unsubscribe?${params.toString()}`
 }
+

@@ -269,3 +269,4 @@ export function PatientSessionHistory({ patientId }: PatientSessionHistoryProps)
     </div>
   )
 }
+

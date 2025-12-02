@@ -126,3 +126,4 @@ export function StatsCards({ stats }: StatsCardsProps) {
     </div>
   )
 }
+

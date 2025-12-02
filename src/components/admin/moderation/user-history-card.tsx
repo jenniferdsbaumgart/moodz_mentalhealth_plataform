@@ -167,3 +167,4 @@ export function UserHistoryCard({ user, history, isLoading }: UserHistoryCardPro
     </div>
   )
 }
+

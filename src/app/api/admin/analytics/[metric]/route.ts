@@ -445,3 +445,4 @@ async function getMoodMetrics(startDate: Date, endDate: Date) {
     topFactors
   }
 }
+

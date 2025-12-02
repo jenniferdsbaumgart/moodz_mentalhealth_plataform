@@ -42,3 +42,4 @@ export function BaseTemplate({ children, preview }: BaseTemplateProps) {
     </Html>
   )
 }
+

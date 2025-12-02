@@ -25,3 +25,4 @@ export function UserAvatar({ name, image, className }: UserAvatarProps) {
   )
 }
 
+

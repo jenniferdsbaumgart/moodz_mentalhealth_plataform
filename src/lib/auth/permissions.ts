@@ -76,3 +76,4 @@ export function hasAllPermissions(userRole: Role, permissions: Permission[]): bo
 }
 
 
+

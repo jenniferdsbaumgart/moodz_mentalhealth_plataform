@@ -108,3 +108,4 @@ export async function runWeeklySummary() {
 
   return results
 }
+

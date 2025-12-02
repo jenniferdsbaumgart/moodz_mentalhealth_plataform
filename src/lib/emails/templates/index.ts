@@ -15,3 +15,4 @@ export type { TherapistApprovedEmailProps } from "./therapist-approved"
 export type { WeeklySummaryEmailProps } from "./weekly-summary"
 export type { PasswordResetEmailProps } from "./password-reset"
 export type { NewBadgeEmailProps } from "./new-badge"
+

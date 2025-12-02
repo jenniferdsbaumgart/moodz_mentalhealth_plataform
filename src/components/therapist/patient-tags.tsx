@@ -334,3 +334,4 @@ export function PatientTags({ patientId }: PatientTagsProps) {
     </div>
   )
 }
+

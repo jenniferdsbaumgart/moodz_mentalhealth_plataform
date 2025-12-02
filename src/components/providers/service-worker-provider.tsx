@@ -33,3 +33,4 @@ export function ServiceWorkerProvider({ children }: ServiceWorkerProviderProps) 
 
   return <>{children}</>
 }
+

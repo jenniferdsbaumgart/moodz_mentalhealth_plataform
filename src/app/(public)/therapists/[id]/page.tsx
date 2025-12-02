@@ -141,3 +141,4 @@ export default async function TherapistPublicPage({ params }: PageProps) {
     </div>
   )
 }
+

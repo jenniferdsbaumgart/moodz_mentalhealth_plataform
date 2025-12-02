@@ -178,3 +178,4 @@ export function TherapistCard({ therapist }: TherapistCardProps) {
     </Card>
   )
 }
+

@@ -167,3 +167,4 @@ export function BadgesDisplay({ badges, totalBadges = 7, className }: BadgesDisp
 }
 
 
+

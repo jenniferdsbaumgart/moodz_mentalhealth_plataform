@@ -338,3 +338,4 @@ export function PatientNotes({ patientId }: PatientNotesProps) {
     </div>
   )
 }
+

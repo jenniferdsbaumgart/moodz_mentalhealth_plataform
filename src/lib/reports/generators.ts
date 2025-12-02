@@ -354,3 +354,4 @@ export async function generateReport(
       throw new Error(`Unknown report type: ${type}`)
   }
 }
+

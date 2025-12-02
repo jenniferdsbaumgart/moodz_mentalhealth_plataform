@@ -250,3 +250,4 @@ function shouldSendEmail(type: NotificationType): boolean {
 
   return emailTypes.includes(type)
 }
+

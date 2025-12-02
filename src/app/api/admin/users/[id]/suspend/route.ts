@@ -171,3 +171,4 @@ export async function DELETE(
 
   return POST(newRequest as NextRequest, { params })
 }
+

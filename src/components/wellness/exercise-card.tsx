@@ -112,3 +112,4 @@ export function ExerciseCard({ exercise, onStart, className }: ExerciseCardProps
 }
 
 
+

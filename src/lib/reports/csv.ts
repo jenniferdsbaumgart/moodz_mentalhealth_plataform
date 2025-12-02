@@ -96,3 +96,4 @@ export function formatNumberForCSV(value: number | null, decimals: number = 2): 
   if (value === null || value === undefined) return ""
   return value.toFixed(decimals)
 }
+

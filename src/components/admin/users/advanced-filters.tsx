@@ -245,3 +245,4 @@ export function AdvancedFilters({ filters, onChange, onClear }: AdvancedFiltersP
     </div>
   )
 }
+

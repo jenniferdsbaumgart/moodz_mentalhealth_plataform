@@ -349,3 +349,4 @@ export function RatingsChart({ data, period }: RatingsChartProps) {
     </div>
   )
 }
+

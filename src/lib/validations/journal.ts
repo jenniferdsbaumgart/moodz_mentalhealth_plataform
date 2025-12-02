@@ -86,3 +86,4 @@ export type UpdateJournalInput = z.infer<typeof updateJournalSchema>
 export type JournalPromptCategory = typeof journalPromptCategories[number]
 
 
+

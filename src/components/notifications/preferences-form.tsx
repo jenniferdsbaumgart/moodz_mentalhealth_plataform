@@ -345,3 +345,4 @@ export function PreferencesForm({ preferences, pushEnabled }: PreferencesFormPro
     </div>
   )
 }
+

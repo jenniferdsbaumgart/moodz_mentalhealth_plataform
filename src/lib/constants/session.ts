@@ -32,3 +32,4 @@ export const SESSION_CATEGORIES = {
 export type SessionCategoryConfig = typeof SESSION_CATEGORIES[SessionCategory]
 
 
+

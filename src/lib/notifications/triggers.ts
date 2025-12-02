@@ -409,3 +409,4 @@ export async function notifyWeeklySummary(userId: string, summaryData: any): Pro
     console.error("Failed to send weekly summary notification:", error)
   }
 }
+

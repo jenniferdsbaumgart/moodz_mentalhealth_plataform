@@ -71,3 +71,4 @@ export type ExerciseCompletionInput = z.infer<typeof exerciseCompletionSchema>
 export type WellnessFiltersInput = z.infer<typeof wellnessFiltersSchema>
 
 
+

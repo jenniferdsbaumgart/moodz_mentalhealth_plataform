@@ -69,3 +69,4 @@ export async function seedNotificationPreferences() {
 
   console.log(`✅ Created notification preferences for ${users.length} users`)
 }
+

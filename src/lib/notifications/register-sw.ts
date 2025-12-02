@@ -159,3 +159,4 @@ export function canReceivePushNotifications(): boolean {
     Notification.permission === "granted"
   )
 }
+

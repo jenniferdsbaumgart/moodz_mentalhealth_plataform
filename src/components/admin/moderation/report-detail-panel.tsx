@@ -291,3 +291,4 @@ export function ReportDetailPanel({ report, onActionComplete }: ReportDetailPane
     </Card>
   )
 }
+

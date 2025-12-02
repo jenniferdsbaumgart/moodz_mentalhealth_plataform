@@ -139,3 +139,4 @@ export function MoodInsights({ insights, className }: MoodInsightsProps) {
 }
 
 
+

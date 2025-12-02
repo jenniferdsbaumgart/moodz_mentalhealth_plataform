@@ -410,3 +410,4 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
     </Dialog>
   )
 }
+

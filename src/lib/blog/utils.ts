@@ -176,3 +176,4 @@ export function generateMetaDescription(content: string, maxLength: number = 160
   return excerpt.replace(/\.\.\.$/, "").trim()
 }
 
+
