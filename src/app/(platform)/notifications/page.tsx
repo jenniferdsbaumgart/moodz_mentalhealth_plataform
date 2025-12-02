@@ -1,54 +1,61 @@
 "use client"
 
-import { useState, useCallback } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState, useMemo, useEffect, useCallback } from "react"
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
+import { useInView } from "react-intersection-observer"
+import { isToday, isYesterday, format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 import {
   Bell,
   CheckCheck,
   Trash2,
-  Filter,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
-  Settings
+  Settings,
+  Calendar,
+  Award,
+  MessageSquare,
+  Megaphone,
+  Filter,
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent } from "@/components/ui/card"
 import { NotificationItem } from "@/components/notifications/notification-item"
-import { usePusher } from "@/hooks/use-pusher"
+import { toast } from "sonner"
 
-// Notification types for filter
-const NOTIFICATION_TYPES = [
-  { value: "all", label: "Todas" },
-  { value: "SESSION_REMINDER", label: "Lembretes de Sessão" },
-  { value: "SESSION_STARTING", label: "Sessão Começando" },
-  { value: "SESSION_CANCELLED", label: "Sessão Cancelada" },
-  { value: "NEW_MESSAGE", label: "Novas Mensagens" },
-  { value: "NEW_BADGE", label: "Badges" },
-  { value: "STREAK_RISK", label: "Risco de Streak" },
-  { value: "STREAK_ACHIEVED", label: "Streak Alcançado" },
-  { value: "NEW_POST_REPLY", label: "Respostas em Posts" },
-  { value: "POST_UPVOTED", label: "Upvotes" },
-  { value: "THERAPIST_APPROVED", label: "Aprovação de Terapeuta" },
-  { value: "NEW_REVIEW", label: "Avaliações" },
-  { value: "SYSTEM_ANNOUNCEMENT", label: "Anúncios" },
-  { value: "WEEKLY_SUMMARY", label: "Resumo Semanal" },
-]
+// Notification type categories
+const NOTIFICATION_CATEGORIES = {
+  all: { 
+    label: "Todas", 
+    icon: Bell,
+    types: null // null means all types
+  },
+  sessions: { 
+    label: "Sessões", 
+    icon: Calendar,
+    types: ["SESSION_REMINDER", "SESSION_STARTING", "SESSION_CANCELLED"]
+  },
+  achievements: { 
+    label: "Conquistas", 
+    icon: Award,
+    types: ["NEW_BADGE", "STREAK_ACHIEVED", "STREAK_RISK"]
+  },
+  community: { 
+    label: "Comunidade", 
+    icon: MessageSquare,
+    types: ["NEW_POST_REPLY", "POST_UPVOTED", "NEW_MESSAGE"]
+  },
+  system: { 
+    label: "Sistema", 
+    icon: Megaphone,
+    types: ["SYSTEM_ANNOUNCEMENT", "THERAPIST_APPROVED", "WEEKLY_SUMMARY", "NEW_REVIEW"]
+  }
+} as const
 
-const READ_FILTERS = [
-  { value: "all", label: "Todas" },
-  { value: "unread", label: "Não lidas" },
-  { value: "read", label: "Lidas" },
-]
+type CategoryKey = keyof typeof NOTIFICATION_CATEGORIES
 
 interface Notification {
   id: string
@@ -60,9 +67,10 @@ interface Notification {
   data?: Record<string, any>
 }
 
-interface NotificationsResponse {
+interface NotificationsPage {
   notifications: Notification[]
   unreadCount: number
+  hasMore: boolean
   pagination: {
     page: number
     limit: number
@@ -74,61 +82,98 @@ interface NotificationsResponse {
 export default function NotificationsPage() {
   const { data: session } = useSession()
   const queryClient = useQueryClient()
+  const { ref, inView } = useInView()
 
-  // Filters state
-  const [typeFilter, setTypeFilter] = useState("all")
-  const [readFilter, setReadFilter] = useState("all")
-  const [page, setPage] = useState(1)
-  const limit = 20
+  // Filter state
+  const [activeCategory, setActiveCategory] = useState<CategoryKey>("all")
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false)
 
   // Build query params
-  const buildQueryParams = useCallback(() => {
+  const buildQueryParams = useCallback((page: number) => {
     const params = new URLSearchParams()
     params.set("page", page.toString())
-    params.set("limit", limit.toString())
-    if (typeFilter !== "all") params.set("type", typeFilter)
-    if (readFilter !== "all") params.set("read", readFilter === "read" ? "true" : "false")
+    params.set("limit", "20")
+    
+    const category = NOTIFICATION_CATEGORIES[activeCategory]
+    if (category.types) {
+      params.set("types", category.types.join(","))
+    }
+    
+    if (showUnreadOnly) {
+      params.set("read", "false")
+    }
+    
     return params.toString()
-  }, [page, typeFilter, readFilter])
+  }, [activeCategory, showUnreadOnly])
 
-  // Fetch notifications
-  const { data, isLoading, refetch } = useQuery<NotificationsResponse>({
-    queryKey: ["notifications", page, typeFilter, readFilter],
-    queryFn: async () => {
-      const response = await fetch(`/api/notifications?${buildQueryParams()}`)
+  // Infinite query for notifications
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch
+  } = useInfiniteQuery<NotificationsPage>({
+    queryKey: ["notifications", "infinite", activeCategory, showUnreadOnly],
+    queryFn: async ({ pageParam = 1 }) => {
+      const response = await fetch(`/api/notifications?${buildQueryParams(pageParam as number)}`)
       if (!response.ok) throw new Error("Failed to fetch notifications")
-      return response.json()
+      const data = await response.json()
+      return {
+        ...data,
+        hasMore: data.pagination.page < data.pagination.totalPages
+      }
     },
+    getNextPageParam: (lastPage) => 
+      lastPage.hasMore ? lastPage.pagination.page + 1 : undefined,
+    initialPageParam: 1,
     enabled: !!session?.user
   })
 
-  // Real-time updates via Pusher
-  usePusher(
-    `user-${session?.user?.id}`,
-    "notification",
-    useCallback((newNotification: Notification) => {
-      queryClient.setQueryData<NotificationsResponse>(
-        ["notifications", page, typeFilter, readFilter],
-        (old) => {
-          if (!old) return old
-          return {
-            ...old,
-            notifications: [newNotification, ...old.notifications],
-            unreadCount: old.unreadCount + 1
-          }
-        }
-      )
-    }, [queryClient, page, typeFilter, readFilter])
-  )
+  // Load more when scrolling to bottom
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage()
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  // Mark as read mutation
+  // Mark all as read mutation
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/notifications/read-all", { method: "POST" })
+      if (!response.ok) throw new Error("Failed to mark all as read")
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] })
+      toast.success("Todas as notificações marcadas como lidas")
+    },
+    onError: () => {
+      toast.error("Erro ao marcar notificações como lidas")
+    }
+  })
+
+  // Delete read notifications mutation
+  const deleteReadMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/notifications?read=true", { method: "DELETE" })
+      if (!response.ok) throw new Error("Failed to delete")
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] })
+      toast.success("Notificações lidas removidas")
+    },
+    onError: () => {
+      toast.error("Erro ao remover notificações")
+    }
+  })
+
+  // Mark single notification as read
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/notifications/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ read: true })
-      })
+      const response = await fetch(`/api/notifications/${id}/read`, { method: "POST" })
       if (!response.ok) throw new Error("Failed to mark as read")
       return response.json()
     },
@@ -137,51 +182,45 @@ export default function NotificationsPage() {
     }
   })
 
-  // Mark all as read mutation
-  const markAllReadMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch("/api/notifications/read-all", {
-        method: "POST"
-      })
-      if (!response.ok) throw new Error("Failed to mark all as read")
-      return response.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] })
-    }
-  })
-
-  // Delete notification mutation
+  // Delete single notification
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/notifications/${id}`, {
-        method: "DELETE"
-      })
-      if (!response.ok) throw new Error("Failed to delete notification")
+      const response = await fetch(`/api/notifications/${id}`, { method: "DELETE" })
+      if (!response.ok) throw new Error("Failed to delete")
       return response.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] })
+      toast.success("Notificação removida")
     }
   })
 
-  // Delete all notifications mutation
-  const deleteAllMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch("/api/notifications", {
-        method: "DELETE"
-      })
-      if (!response.ok) throw new Error("Failed to delete all notifications")
-      return response.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] })
-    }
-  })
+  // Group notifications by date
+  const groupedNotifications = useMemo(() => {
+    const allNotifications = data?.pages.flatMap(p => p.notifications) || []
+    const groups: Record<string, Notification[]> = {}
 
-  const notifications = data?.notifications || []
-  const unreadCount = data?.unreadCount || 0
-  const pagination = data?.pagination || { page: 1, limit: 20, total: 0, totalPages: 1 }
+    allNotifications.forEach(notification => {
+      const date = new Date(notification.createdAt)
+      let key: string
+
+      if (isToday(date)) {
+        key = "Hoje"
+      } else if (isYesterday(date)) {
+        key = "Ontem"
+      } else {
+        key = format(date, "d 'de' MMMM", { locale: ptBR })
+      }
+
+      if (!groups[key]) groups[key] = []
+      groups[key].push(notification)
+    })
+
+    return groups
+  }, [data])
+
+  const unreadCount = data?.pages[0]?.unreadCount || 0
+  const totalCount = data?.pages[0]?.pagination.total || 0
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -194,7 +233,7 @@ export default function NotificationsPage() {
           </h1>
           <p className="text-muted-foreground mt-1">
             {unreadCount > 0
-              ? `${unreadCount} notificação${unreadCount !== 1 ? 's' : ''} não lida${unreadCount !== 1 ? 's' : ''}`
+              ? `${unreadCount} notificação${unreadCount !== 1 ? "s" : ""} não lida${unreadCount !== 1 ? "s" : ""}`
               : "Todas as notificações foram lidas"
             }
           </p>
@@ -208,156 +247,140 @@ export default function NotificationsPage() {
         </Link>
       </div>
 
-      {/* Filters and Actions */}
-      <Card className="mb-6">
-        <CardContent className="py-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            {/* Filters */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={typeFilter} onValueChange={(value) => { setTypeFilter(value); setPage(1) }}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {NOTIFICATION_TYPES.map(type => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      {/* Actions Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-sm">
+            {totalCount} total
+          </Badge>
+          {unreadCount > 0 && (
+            <Badge variant="default" className="text-sm">
+              {unreadCount} não lidas
+            </Badge>
+          )}
+        </div>
+        
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => markAllReadMutation.mutate()}
+            disabled={markAllReadMutation.isPending || unreadCount === 0}
+          >
+            {markAllReadMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCheck className="mr-2 h-4 w-4" />
+            )}
+            Marcar todas como lidas
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (confirm("Tem certeza que deseja remover todas as notificações lidas?")) {
+                deleteReadMutation.mutate()
+              }
+            }}
+            disabled={deleteReadMutation.isPending}
+          >
+            {deleteReadMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="mr-2 h-4 w-4" />
+            )}
+            Limpar lidas
+          </Button>
+        </div>
+      </div>
 
-              <Select value={readFilter} onValueChange={(value) => { setReadFilter(value); setPage(1) }}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {READ_FILTERS.map(filter => (
-                    <SelectItem key={filter.value} value={filter.value}>
-                      {filter.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Category Tabs */}
+      <Tabs 
+        value={activeCategory} 
+        onValueChange={(value) => setActiveCategory(value as CategoryKey)}
+        className="mb-6"
+      >
+        <TabsList className="flex-wrap h-auto gap-1 p-1">
+          {Object.entries(NOTIFICATION_CATEGORIES).map(([key, { label, icon: Icon }]) => (
+            <TabsTrigger 
+              key={key} 
+              value={key} 
+              className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <Icon className="h-4 w-4" />
+              <span className="hidden sm:inline">{label}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => markAllReadMutation.mutate()}
-                  disabled={markAllReadMutation.isPending}
-                >
-                  {markAllReadMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <CheckCheck className="h-4 w-4 mr-2" />
-                  )}
-                  Marcar todas como lidas
-                </Button>
-              )}
-
-              {notifications.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (confirm("Tem certeza que deseja excluir todas as notificações?")) {
-                      deleteAllMutation.mutate()
-                    }
-                  }}
-                  disabled={deleteAllMutation.isPending}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  {deleteAllMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4 mr-2" />
-                  )}
-                  Excluir todas
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Unread Filter Toggle */}
+      <div className="flex items-center gap-2 mb-6">
+        <Filter className="h-4 w-4 text-muted-foreground" />
+        <Button
+          variant={showUnreadOnly ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+        >
+          {showUnreadOnly ? "Mostrar todas" : "Apenas não lidas"}
+        </Button>
+      </div>
 
       {/* Notifications List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {pagination.total} notificação{pagination.total !== 1 ? 's' : ''}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : Object.keys(groupedNotifications).length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <Bell className="h-16 w-16 text-muted-foreground mb-4 opacity-50" />
+            <h3 className="text-xl font-semibold mb-2">Nenhuma notificação</h3>
+            <p className="text-muted-foreground text-center max-w-md">
+              {activeCategory !== "all" || showUnreadOnly
+                ? "Nenhuma notificação corresponde aos filtros selecionados."
+                : "Você está em dia com tudo! Novas notificações aparecerão aqui."
+              }
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-8">
+          {Object.entries(groupedNotifications).map(([date, notifications]) => (
+            <div key={date}>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                {date}
+              </h3>
+              <Card>
+                <CardContent className="p-0 divide-y">
+                  {notifications.map((notification) => (
+                    <NotificationItem
+                      key={notification.id}
+                      notification={notification}
+                      onMarkAsRead={(id) => markAsReadMutation.mutate(id)}
+                      onDelete={(id) => deleteMutation.mutate(id)}
+                      showMarkAsRead
+                      showDelete
+                    />
+                  ))}
+                </CardContent>
+              </Card>
             </div>
-          ) : notifications.length === 0 ? (
-            <div className="text-center py-12">
-              <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h3 className="text-lg font-medium mb-2">Nenhuma notificação</h3>
-              <p className="text-muted-foreground">
-                {typeFilter !== "all" || readFilter !== "all"
-                  ? "Nenhuma notificação corresponde aos filtros selecionados."
-                  : "Você não tem notificações no momento."
-                }
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {notifications.map((notification) => (
-                <NotificationItem
-                  key={notification.id}
-                  notification={notification}
-                  onMarkAsRead={(id) => markAsReadMutation.mutate(id)}
-                  onDelete={(id) => deleteMutation.mutate(id)}
-                  showMarkAsRead={true}
-                  showDelete={true}
-                />
-              ))}
-            </div>
-          )}
+          ))}
 
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-6 border-t">
+          {/* Infinite scroll trigger */}
+          <div ref={ref} className="flex justify-center py-4">
+            {isFetchingNextPage && (
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            )}
+            {!hasNextPage && totalCount > 0 && (
               <p className="text-sm text-muted-foreground">
-                Página {pagination.page} de {pagination.totalPages}
+                Fim das notificações
               </p>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={pagination.page === 1}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Anterior
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
-                  disabled={pagination.page === pagination.totalPages}
-                >
-                  Próxima
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-

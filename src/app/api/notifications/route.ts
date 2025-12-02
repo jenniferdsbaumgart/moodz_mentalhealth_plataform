@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { Prisma } from "@prisma/client"
 
 /**
  * GET /api/notifications
@@ -21,21 +22,29 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get("page") || "1")
     const limit = parseInt(searchParams.get("limit") || "20")
-    const type = searchParams.get("type")
+    const type = searchParams.get("type") // Single type
+    const types = searchParams.get("types") // Multiple types (comma-separated)
     const read = searchParams.get("read")
 
     const skip = (page - 1) * limit
 
     // Build where clause
-    const where: any = {
+    const where: Prisma.NotificationWhereInput = {
       userId: session.user.id
     }
 
-    if (type) {
-      where.type = type
+    // Support both single type and multiple types
+    if (types) {
+      const typeArray = types.split(",").map(t => t.trim()).filter(Boolean)
+      if (typeArray.length > 0) {
+        where.type = { in: typeArray as any }
+      }
+    } else if (type) {
+      where.type = type as any
     }
 
-    if (read !== null && read !== undefined) {
+    // Filter by read status
+    if (read !== null && read !== undefined && read !== "") {
       where.read = read === "true"
     }
 
@@ -77,7 +86,8 @@ export async function GET(request: NextRequest) {
 
 /**
  * DELETE /api/notifications
- * Delete all notifications for the authenticated user
+ * Delete notifications for the authenticated user
+ * Supports ?read=true to delete only read notifications
  */
 export async function DELETE(request: NextRequest) {
   try {
@@ -90,11 +100,24 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    await db.notification.deleteMany({
-      where: { userId: session.user.id }
-    })
+    const { searchParams } = new URL(request.url)
+    const readOnly = searchParams.get("read") === "true"
 
-    return NextResponse.json({ success: true })
+    const where: Prisma.NotificationWhereInput = {
+      userId: session.user.id
+    }
+
+    // If read=true, only delete read notifications
+    if (readOnly) {
+      where.read = true
+    }
+
+    const result = await db.notification.deleteMany({ where })
+
+    return NextResponse.json({ 
+      success: true,
+      deleted: result.count
+    })
   } catch (error) {
     console.error("Error deleting notifications:", error)
     return NextResponse.json(
