@@ -518,3 +518,198 @@ export async function notifyWeeklySummary(userId: string, summaryData: any): Pro
   }
 }
 
+// ============================================
+// THERAPIST-SPECIFIC NOTIFICATIONS
+// ============================================
+
+/**
+ * Notifies therapist about a new enrollment in their session
+ * (More detailed version with participant count)
+ */
+export async function notifyNewEnrollment(
+  sessionId: string,
+  patientId: string
+): Promise<void> {
+  try {
+    const [session, patient] = await Promise.all([
+      db.groupSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          therapist: {
+            include: {
+              user: { select: { id: true } }
+            }
+          },
+          _count: { select: { participants: true } }
+        }
+      }),
+      db.user.findUnique({
+        where: { id: patientId },
+        include: {
+          patientProfile: { select: { name: true } }
+        }
+      })
+    ])
+
+    if (!session || !patient) return
+
+    const patientName = patient.patientProfile?.name || patient.name || "Um paciente"
+    const currentCount = session._count.participants
+    const spotsLeft = session.maxParticipants - currentCount
+
+    await createNotification({
+      userId: session.therapist.userId,
+      type: "NEW_ENROLLMENT",
+      title: "👤 Nova inscrição em sessão",
+      message: `${patientName} se inscreveu na sessão "${session.title}". ${spotsLeft > 0 ? `${spotsLeft} vaga${spotsLeft !== 1 ? 's' : ''} restante${spotsLeft !== 1 ? 's' : ''}.` : 'Sessão lotada!'}`,
+      data: {
+        link: `/therapist/sessions/${sessionId}`,
+        sessionId: sessionId,
+        patientId: patientId,
+        patientName: patientName,
+        currentParticipants: currentCount,
+        maxParticipants: session.maxParticipants,
+        spotsLeft: spotsLeft
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send new enrollment notification:", error)
+  }
+}
+
+/**
+ * Notifies therapist about upcoming session (1 hour before)
+ */
+export async function notifySessionReminderTherapist(sessionId: string): Promise<void> {
+  try {
+    const session = await db.groupSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        therapist: {
+          include: {
+            user: { select: { id: true, name: true } }
+          }
+        },
+        _count: { select: { participants: true } }
+      }
+    })
+
+    if (!session) return
+
+    const sessionDate = new Date(session.scheduledAt)
+    const formattedTime = sessionDate.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit"
+    })
+
+    await createNotification({
+      userId: session.therapist.userId,
+      type: "SESSION_REMINDER_THERAPIST",
+      title: "⏰ Lembrete: Sessão em 1 hora",
+      message: `Sua sessão "${session.title}" começa às ${formattedTime}. ${session._count.participants} participante${session._count.participants !== 1 ? 's' : ''} inscrito${session._count.participants !== 1 ? 's' : ''}.`,
+      data: {
+        link: `/therapist/sessions/${sessionId}`,
+        sessionId: sessionId,
+        participantCount: session._count.participants,
+        scheduledAt: session.scheduledAt.toISOString()
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send therapist session reminder:", error)
+  }
+}
+
+/**
+ * Notifies therapist when a patient reaches a milestone
+ */
+export async function notifyPatientMilestone(
+  therapistUserId: string,
+  patientId: string,
+  milestoneType: "sessions" | "streak" | "badges" | "exercises",
+  milestoneValue: number
+): Promise<void> {
+  try {
+    const patient = await db.user.findUnique({
+      where: { id: patientId },
+      include: {
+        patientProfile: { select: { name: true } }
+      }
+    })
+
+    if (!patient) return
+
+    const patientName = patient.patientProfile?.name || patient.name || "Um paciente"
+
+    const milestoneMessages: Record<string, { title: string; message: string }> = {
+      sessions: {
+        title: "🎯 Paciente atingiu marco de sessões",
+        message: `${patientName} completou ${milestoneValue} sessões! Parabéns pelo progresso.`
+      },
+      streak: {
+        title: "🔥 Paciente atingiu marco de sequência",
+        message: `${patientName} manteve uma sequência de ${milestoneValue} dias consecutivos!`
+      },
+      badges: {
+        title: "🏆 Paciente conquistou badges",
+        message: `${patientName} conquistou ${milestoneValue} badges na plataforma!`
+      },
+      exercises: {
+        title: "💪 Paciente completou exercícios",
+        message: `${patientName} completou ${milestoneValue} exercícios de bem-estar!`
+      }
+    }
+
+    const milestone = milestoneMessages[milestoneType]
+
+    await createNotification({
+      userId: therapistUserId,
+      type: "PATIENT_MILESTONE",
+      title: milestone.title,
+      message: milestone.message,
+      data: {
+        link: `/therapist/patients/${patientId}`,
+        patientId: patientId,
+        patientName: patientName,
+        milestoneType: milestoneType,
+        milestoneValue: milestoneValue
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send patient milestone notification:", error)
+  }
+}
+
+/**
+ * Notifies therapist when they receive a detailed review
+ */
+export async function notifyNewReviewDetailed(
+  therapistUserId: string,
+  reviewData: {
+    rating: number
+    sessionTitle: string
+    patientName?: string
+    isAnonymous: boolean
+    comment?: string
+  }
+): Promise<void> {
+  try {
+    const stars = "⭐".repeat(reviewData.rating)
+    const reviewer = reviewData.isAnonymous ? "Um paciente (anónimo)" : reviewData.patientName || "Um paciente"
+
+    await createNotification({
+      userId: therapistUserId,
+      type: "NEW_REVIEW",
+      title: `${stars} Nova avaliação recebida`,
+      message: `${reviewer} avaliou a sessão "${reviewData.sessionTitle}" com ${reviewData.rating} estrela${reviewData.rating !== 1 ? 's' : ''}.${reviewData.comment ? ` Comentário: "${reviewData.comment.substring(0, 50)}${reviewData.comment.length > 50 ? '...' : ''}"` : ''}`,
+      data: {
+        link: "/therapist/reviews",
+        rating: reviewData.rating,
+        sessionTitle: reviewData.sessionTitle,
+        hasComment: !!reviewData.comment
+      }
+    })
+  } catch (error) {
+    console.error("Failed to send detailed review notification:", error)
+  }
+}
+

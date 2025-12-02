@@ -24,7 +24,10 @@ import {
   Zap,
   Users,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  UserPlus,
+  Target,
+  Stethoscope
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -156,26 +159,75 @@ const NOTIFICATION_PREFERENCES = [
         icon: Megaphone,
         preview: "📢 Nova funcionalidade: Agora você pode agendar sessões recorrentes!",
         defaultChannels: { email: true, push: true, inApp: true }
+      }
+    ]
+  },
+  {
+    category: "Terapeuta",
+    icon: Stethoscope,
+    color: "text-teal-600",
+    bgColor: "bg-teal-50",
+    therapistOnly: true,
+    types: [
+      {
+        type: "SESSION_REMINDER_THERAPIST",
+        label: "Lembretes de sessão",
+        description: "Receba avisos antes das suas sessões como terapeuta",
+        icon: Clock,
+        preview: "⏰ Sua sessão 'Mindfulness para Iniciantes' começa às 14:00. 8 participantes inscritos.",
+        defaultChannels: { email: true, push: true, inApp: true }
       },
       {
-        type: "THERAPIST_APPROVED",
-        label: "Aprovação de terapeuta",
-        description: "Status da aprovação como terapeuta",
-        icon: Check,
-        preview: "✅ Seu perfil de terapeuta foi aprovado! Comece a atender.",
+        type: "NEW_ENROLLMENT",
+        label: "Novas inscrições",
+        description: "Quando um paciente se inscreve na sua sessão",
+        icon: UserPlus,
+        preview: "👤 Maria Silva se inscreveu na sessão 'Mindfulness para Iniciantes'. 2 vagas restantes.",
         defaultChannels: { email: true, push: true, inApp: true }
       },
       {
         type: "NEW_REVIEW",
         label: "Novas avaliações",
-        description: "Quando você recebe uma avaliação",
+        description: "Quando você recebe uma avaliação de paciente",
         icon: Star,
-        preview: "⭐ Você recebeu uma avaliação de 5 estrelas!",
+        preview: "⭐⭐⭐⭐⭐ Maria Silva avaliou sua sessão com 5 estrelas!",
+        defaultChannels: { email: true, push: true, inApp: true }
+      },
+      {
+        type: "PATIENT_MILESTONE",
+        label: "Marcos de pacientes",
+        description: "Quando um paciente atinge um marco importante",
+        icon: Target,
+        preview: "🎯 João Santos completou 10 sessões! Parabéns pelo progresso.",
+        defaultChannels: { email: false, push: true, inApp: true }
+      },
+      {
+        type: "THERAPIST_APPROVED",
+        label: "Aprovação de perfil",
+        description: "Status da aprovação do seu perfil de terapeuta",
+        icon: Check,
+        preview: "✅ Seu perfil de terapeuta foi aprovado! Comece a atender.",
         defaultChannels: { email: true, push: true, inApp: true }
       }
     ]
   },
 ]
+
+interface NotificationCategory {
+  category: string
+  icon: any
+  color: string
+  bgColor: string
+  therapistOnly?: boolean
+  types: {
+    type: string
+    label: string
+    description: string
+    icon: any
+    preview: string
+    defaultChannels: { email: boolean; push: boolean; inApp: boolean }
+  }[]
+}
 
 interface Preferences {
   [key: string]: {
@@ -189,8 +241,17 @@ export default function NotificationPreferencesPage() {
   const { data: session } = useSession()
   const queryClient = useQueryClient()
   const { permission, isSubscribed, subscribe, unsubscribe, isLoading: pushLoading } = usePushNotifications()
+  
+  // Filter categories based on user role
+  const userRole = (session?.user as any)?.role
+  const isTherapist = userRole === "THERAPIST" || userRole === "ADMIN" || userRole === "SUPER_ADMIN"
+  
+  const filteredPreferences = NOTIFICATION_PREFERENCES.filter(
+    (category: NotificationCategory) => !category.therapistOnly || isTherapist
+  )
+  
   const [expandedCategories, setExpandedCategories] = useState<string[]>(
-    NOTIFICATION_PREFERENCES.map(c => c.category)
+    filteredPreferences.map(c => c.category)
   )
   const [testingType, setTestingType] = useState<string | null>(null)
 
@@ -416,7 +477,7 @@ export default function NotificationPreferencesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {NOTIFICATION_PREFERENCES.map((category) => {
+          {filteredPreferences.map((category) => {
             const CategoryIcon = category.icon
             const isExpanded = expandedCategories.includes(category.category)
 
@@ -432,7 +493,14 @@ export default function NotificationPreferencesPage() {
                         <CategoryIcon className={cn("h-5 w-5", category.color)} />
                       </div>
                       <div>
-                        <CardTitle className="text-lg">{category.category}</CardTitle>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          {category.category}
+                          {category.therapistOnly && (
+                            <Badge variant="outline" className="text-xs font-normal">
+                              Terapeuta
+                            </Badge>
+                          )}
+                        </CardTitle>
                         <CardDescription className="text-sm">
                           {category.types.length} tipos de notificação
                         </CardDescription>

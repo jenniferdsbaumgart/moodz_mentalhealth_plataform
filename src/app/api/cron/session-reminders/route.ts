@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { notifySessionReminder, notifySessionStarting } from "@/lib/notifications/triggers"
+import { 
+  notifySessionReminder, 
+  notifySessionStarting,
+  notifySessionReminderTherapist 
+} from "@/lib/notifications/triggers"
 
 /**
  * GET /api/cron/session-reminders
@@ -65,7 +69,11 @@ export async function GET(request: NextRequest) {
 
     for (const session of sessionsIn1Hour) {
       try {
+        // Notify participants
         await notifySessionReminder(session.id)
+        
+        // Notify therapist
+        await notifySessionReminderTherapist(session.id)
         
         // Mark reminder as sent
         await db.groupSession.update({

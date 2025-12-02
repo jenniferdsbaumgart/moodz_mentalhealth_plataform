@@ -6,6 +6,7 @@ import { NotificationType } from "@prisma/client"
 
 // Test notification content for each type
 const testNotifications: Record<string, { title: string; message: string; data?: Record<string, any> }> = {
+  // Patient session notifications
   SESSION_REMINDER: {
     title: "Lembrete: Sessão em 1 hora",
     message: "Sua sessão de terapia com Dr. Silva começa em 1 hora. Prepare-se!",
@@ -21,11 +22,27 @@ const testNotifications: Record<string, { title: string; message: string; data?:
     message: "Infelizmente, sua sessão de hoje foi cancelada. Entre em contato para reagendar.",
     data: { sessionId: "test-session", link: "/sessions" }
   },
+  
+  // Therapist session notifications
+  SESSION_REMINDER_THERAPIST: {
+    title: "⏰ Lembrete: Sessão em 1 hora",
+    message: "Sua sessão 'Mindfulness para Iniciantes' começa às 14:00. 8 participantes inscritos.",
+    data: { sessionId: "test-session", link: "/therapist/sessions", participantCount: 8 }
+  },
+  NEW_ENROLLMENT: {
+    title: "👤 Nova inscrição em sessão",
+    message: "Maria Silva se inscreveu na sessão 'Mindfulness para Iniciantes'. 2 vagas restantes.",
+    data: { sessionId: "test-session", link: "/therapist/sessions", patientName: "Maria Silva", spotsLeft: 2 }
+  },
+  
+  // Communication
   NEW_MESSAGE: {
     title: "Nova mensagem",
     message: "Você recebeu uma nova mensagem de Dr. Silva.",
     data: { link: "/messages" }
   },
+  
+  // Gamification
   NEW_BADGE: {
     title: "🏆 Novo badge conquistado!",
     message: "Parabéns! Você conquistou o badge 'Primeira Sessão'. Continue assim!",
@@ -41,6 +58,8 @@ const testNotifications: Record<string, { title: string; message: string; data?:
     message: "Incrível! Você manteve seu streak por mais um dia. Continue assim!",
     data: { streakDays: 7, link: "/dashboard" }
   },
+  
+  // Community
   NEW_POST_REPLY: {
     title: "Nova resposta no seu post",
     message: "Alguém respondeu ao seu post na comunidade. Confira!",
@@ -51,16 +70,25 @@ const testNotifications: Record<string, { title: string; message: string; data?:
     message: "Alguém gostou do seu post na comunidade.",
     data: { postId: "test-post", link: "/community" }
   },
+  
+  // Therapist specific
   THERAPIST_APPROVED: {
     title: "✅ Perfil aprovado!",
     message: "Parabéns! Seu perfil de terapeuta foi aprovado. Você já pode atender pacientes.",
     data: { link: "/therapist/dashboard" }
   },
   NEW_REVIEW: {
-    title: "⭐ Nova avaliação recebida",
-    message: "Um paciente deixou uma avaliação de 5 estrelas para você!",
-    data: { rating: 5, link: "/therapist/reviews" }
+    title: "⭐⭐⭐⭐⭐ Nova avaliação recebida",
+    message: "Maria Silva avaliou a sessão 'Mindfulness para Iniciantes' com 5 estrelas. Comentário: 'Excelente sessão!'",
+    data: { rating: 5, link: "/therapist/reviews", hasComment: true }
   },
+  PATIENT_MILESTONE: {
+    title: "🎯 Paciente atingiu marco de sessões",
+    message: "João Santos completou 10 sessões! Parabéns pelo progresso do seu paciente.",
+    data: { patientId: "test-patient", link: "/therapist/patients", milestoneType: "sessions", milestoneValue: 10 }
+  },
+  
+  // System
   SYSTEM_ANNOUNCEMENT: {
     title: "📢 Novidades na Moodz",
     message: "Confira as novas funcionalidades que adicionamos à plataforma!",

@@ -924,17 +924,33 @@ enum ReportStatus {
 }
 
 enum NotificationType {
+  // Session notifications (Patient)
   SESSION_REMINDER      // Lembrete de sessão
   SESSION_STARTING      // Sessão começando
   SESSION_CANCELLED     // Sessão cancelada
+  
+  // Session notifications (Therapist)
+  SESSION_REMINDER_THERAPIST  // Lembrete de sessão (terapeuta)
+  NEW_ENROLLMENT              // Nova inscrição em sessão
+  
+  // Communication
   NEW_MESSAGE           // Nova mensagem no chat
+  
+  // Gamification
   NEW_BADGE             // Badge conquistado
   STREAK_RISK           // Streak em risco
   STREAK_ACHIEVED       // Streak mantido
+  
+  // Community
   NEW_POST_REPLY        // Resposta no post
   POST_UPVOTED          // Post recebeu upvote
+  
+  // Therapist specific
   THERAPIST_APPROVED    // Terapeuta aprovado
   NEW_REVIEW            // Nova avaliação (terapeuta)
+  PATIENT_MILESTONE     // Paciente atingiu marco
+  
+  // System
   SYSTEM_ANNOUNCEMENT   // Anúncio do sistema
   WEEKLY_SUMMARY        // Resumo semanal
 }
