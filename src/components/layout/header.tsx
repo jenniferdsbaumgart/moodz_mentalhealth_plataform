@@ -14,6 +14,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { signOut, useSession } from "next-auth/react"
 import { User, LogOut, Settings } from "lucide-react"
+import { SearchTrigger } from "@/components/search/search-trigger"
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
+import Link from "next/link"
 
 export function Header() {
   const { data: session } = useSession()
@@ -23,18 +26,29 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
         {/* Mobile Navigation */}
         <MobileNav />
 
         {/* Logo - visible on all screens */}
-        <div className="mr-6 flex items-center space-x-2">
+        <Link href="/dashboard" className="mr-6 flex items-center space-x-2">
           <h1 className="text-xl font-semibold text-primary">Moodz</h1>
+        </Link>
+
+        {/* Search Trigger - centered on larger screens */}
+        <div className="hidden flex-1 justify-center px-4 md:flex">
+          <SearchTrigger className="max-w-md" />
         </div>
 
-        {/* Rest of header */}
-        <div className="flex flex-1 items-center justify-end space-x-4">
+        {/* Right side actions */}
+        <div className="flex flex-1 items-center justify-end space-x-2 md:flex-none">
+          {/* Search icon for mobile */}
+          <SearchTrigger variant="icon" className="md:hidden" />
+          
+          {/* Notifications */}
+          {session?.user && <NotificationDropdown />}
+          
           <ThemeToggle />
 
           {session?.user ? (
