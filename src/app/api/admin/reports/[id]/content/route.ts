@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-
 /**
  * GET /api/admin/reports/[id]/content
  * Get full content details for a report including context
@@ -12,23 +10,18 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     const admin = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const reportId = params.id
-
     // Get the report
     const report = await db.report.findUnique({
       where: { id: reportId },
@@ -37,16 +30,13 @@ export async function GET(
         contentId: true
       }
     })
-
     if (!report) {
       return NextResponse.json({ error: "Report not found" }, { status: 404 })
     }
-
     let content = null
     let parentPost = null
     let relatedComments: any[] = []
     let otherReports: any[] = []
-
     if (report.contentType === "POST") {
       // Get post with comments
       content = await db.post.findUnique({
@@ -83,7 +73,6 @@ export async function GET(
           }
         }
       })
-
       if (content) {
         relatedComments = content.comments
       }
@@ -137,7 +126,6 @@ export async function GET(
           }
         }
       })
-
       if (comment) {
         content = {
           id: comment.id,
@@ -149,7 +137,6 @@ export async function GET(
         relatedComments = comment.post?.comments || []
       }
     }
-
     // Get other reports on the same content
     otherReports = await db.report.findMany({
       where: {
@@ -165,7 +152,6 @@ export async function GET(
       orderBy: { createdAt: "desc" },
       take: 5
     })
-
     return NextResponse.json({
       content: content?.content,
       context: {
@@ -182,4 +168,3 @@ export async function GET(
     )
   }
 }
-

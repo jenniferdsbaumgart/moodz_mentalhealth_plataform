@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { createNotification } from "@/lib/notifications/service"
 import { NotificationType } from "@prisma/client"
-
 /**
  * POST /api/admin/users/[id]/suspend
  * Suspend a user temporarily or permanently
@@ -14,26 +12,21 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     // Check if user is admin
     const admin = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (admin?.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const userId = params.id
     const body = await request.json()
     const { type, duration, reason } = body
-
     // Validate type
     if (!type || !["suspend", "ban", "unban"].includes(type)) {
       return NextResponse.json(
@@ -41,7 +34,6 @@ export async function POST(
         { status: 400 }
       )
     }
-
     // Prevent admin from suspending themselves
     if (userId === session.user.id) {
       return NextResponse.json(
@@ -49,17 +41,14 @@ export async function POST(
         { status: 400 }
       )
     }
-
     // Get current user
     const currentUser = await db.user.findUnique({
       where: { id: userId },
       select: { status: true, name: true, email: true, role: true }
     })
-
     if (!currentUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
-
     // Prevent suspending other admins
     if (currentUser.role === "ADMIN" && type !== "unban") {
       return NextResponse.json(
@@ -67,12 +56,10 @@ export async function POST(
         { status: 400 }
       )
     }
-
     let newStatus: string
     let suspendUntil: Date | null = null
     let notificationTitle: string
     let notificationMessage: string
-
     switch (type) {
       case "suspend":
         // Temporary suspension
@@ -82,25 +69,21 @@ export async function POST(
         notificationTitle = "Conta suspensa temporariamente"
         notificationMessage = `Sua conta foi suspensa até ${suspendUntil.toLocaleDateString("pt-BR")}.${reason ? ` Motivo: ${reason}` : ""}`
         break
-
       case "ban":
         // Permanent ban
         newStatus = "BANNED"
         notificationTitle = "Conta banida"
         notificationMessage = `Sua conta foi banida permanentemente.${reason ? ` Motivo: ${reason}` : ""}`
         break
-
       case "unban":
         // Remove suspension/ban
         newStatus = "ACTIVE"
         notificationTitle = "Conta reativada"
         notificationMessage = "Sua conta foi reativada. Bem-vindo de volta!"
         break
-
       default:
         return NextResponse.json({ error: "Invalid type" }, { status: 400 })
     }
-
     // Update user status
     const updatedUser = await db.user.update({
       where: { id: userId },
@@ -112,7 +95,6 @@ export async function POST(
         status: true
       }
     })
-
     // Log the action
     await db.auditLog.create({
       data: {
@@ -129,7 +111,6 @@ export async function POST(
         })
       }
     })
-
     // Notify user
     await createNotification({
       userId: userId,
@@ -138,7 +119,6 @@ export async function POST(
       message: notificationMessage,
       data: { link: "/support" }
     })
-
     return NextResponse.json({
       success: true,
       user: updatedUser,
@@ -153,7 +133,6 @@ export async function POST(
     )
   }
 }
-
 /**
  * DELETE /api/admin/users/[id]/suspend
  * Remove suspension from a user (alias for unban)
@@ -168,7 +147,5 @@ export async function DELETE(
     headers: request.headers,
     body: JSON.stringify({ type: "unban" })
   })
-
   return POST(newRequest as NextRequest, { params })
 }
-

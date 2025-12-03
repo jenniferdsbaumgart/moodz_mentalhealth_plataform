@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { createCommentSchema } from "@/lib/validations/community"
 import { notifyNewReply } from "@/lib/notifications/triggers"
+import { rateLimit } from "@/lib/rate-limit/middleware"
+import { HOUR } from "@/lib/rate-limit/config"
 
 export async function GET(
   request: NextRequest,
@@ -130,6 +132,20 @@ export async function POST(
         { error: "Não autorizado" },
         { status: 401 }
       )
+    }
+
+    // Rate limiting for comment creation
+    const { allowed, response: rateLimitResponse } = await rateLimit(request, {
+      userId: session.user.id,
+      config: {
+        limit: 30,
+        windowMs: HOUR,
+        identifier: "user",
+        message: "Limite de comentários atingido. Tente novamente em 1 hora.",
+      },
+    })
+    if (!allowed) {
+      return rateLimitResponse
     }
 
     const body = await request.json()

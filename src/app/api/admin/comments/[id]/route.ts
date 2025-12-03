@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-
 /**
  * DELETE /api/admin/comments/[id]
  * Delete a comment (admin moderation)
@@ -12,23 +10,18 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     const admin = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const commentId = params.id
-
     // Get comment info before deletion for logging
     const comment = await db.comment.findUnique({
       where: { id: commentId },
@@ -41,16 +34,13 @@ export async function DELETE(
         post: { select: { title: true } }
       }
     })
-
     if (!comment) {
       return NextResponse.json({ error: "Comment not found" }, { status: 404 })
     }
-
     // Delete comment
     await db.comment.delete({
       where: { id: commentId }
     })
-
     // Log the action
     await db.auditLog.create({
       data: {
@@ -68,7 +58,6 @@ export async function DELETE(
         })
       }
     })
-
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error deleting comment:", error)
@@ -78,7 +67,6 @@ export async function DELETE(
     )
   }
 }
-
 /**
  * GET /api/admin/comments/[id]
  * Get comment details for moderation
@@ -88,21 +76,17 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     const admin = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const comment = await db.comment.findUnique({
       where: { id: params.id },
       include: {
@@ -130,11 +114,9 @@ export async function GET(
         }
       }
     })
-
     if (!comment) {
       return NextResponse.json({ error: "Comment not found" }, { status: 404 })
     }
-
     return NextResponse.json(comment)
   } catch (error) {
     console.error("Error fetching comment:", error)
@@ -144,4 +126,3 @@ export async function GET(
     )
   }
 }
-

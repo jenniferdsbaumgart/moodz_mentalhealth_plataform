@@ -1,34 +1,27 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { generateReport, ReportType, ReportFilters } from "@/lib/reports"
-
 /**
  * POST /api/admin/reports/export
  * Generate and export a report
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     // Check if user is admin
     const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (user?.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const body = await request.json()
     const { type, format, filters } = body
-
     // Validate report type
     const validTypes: ReportType[] = ["users", "sessions", "posts", "moderation", "wellness"]
     if (!validTypes.includes(type)) {
@@ -37,7 +30,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
     // Validate format
     if (!["csv", "json"].includes(format)) {
       return NextResponse.json(
@@ -45,10 +37,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
     // Parse date filters
     const reportFilters: ReportFilters = {}
-    
     if (filters?.startDate) {
       reportFilters.startDate = new Date(filters.startDate)
     }
@@ -67,10 +57,8 @@ export async function POST(request: NextRequest) {
     if (filters?.therapistId) {
       reportFilters.therapistId = filters.therapistId
     }
-
     // Generate report
     const report = await generateReport(type, reportFilters)
-
     // Return based on format
     if (format === "csv") {
       return new NextResponse(report.csv, {
@@ -80,7 +68,6 @@ export async function POST(request: NextRequest) {
         }
       })
     }
-
     // JSON format
     return NextResponse.json({
       type,
@@ -97,29 +84,24 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
 /**
  * GET /api/admin/reports/export
  * Get available report types and their fields
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     // Check if user is admin
     const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (user?.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const reportTypes = [
       {
         type: "users",
@@ -157,7 +139,6 @@ export async function GET(request: NextRequest) {
         filters: ["startDate", "endDate"]
       }
     ]
-
     // Get filter options
     const [roles, sessionCategories, postCategories, therapists] = await Promise.all([
       // Get distinct roles
@@ -183,7 +164,6 @@ export async function GET(request: NextRequest) {
         }
       })
     ])
-
     return NextResponse.json({
       reportTypes,
       filterOptions: {
@@ -209,4 +189,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-

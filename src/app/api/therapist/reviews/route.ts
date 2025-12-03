@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db as prisma } from "@/lib/db"
 import {
   format,
@@ -16,14 +15,11 @@ import {
   parseISO,
   isWithinInterval
 } from "date-fns"
-
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions)
-
+  const session = await auth()
   if (!session?.user || session.user.role !== "THERAPIST") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-
   const therapistId = session.user.id
   const { searchParams } = new URL(request.url)
   const period = searchParams.get("period") || "all"
@@ -31,7 +27,6 @@ export async function GET(request: NextRequest) {
   const sort = searchParams.get("sort") || "newest"
   const fromDate = searchParams.get("from")
   const toDate = searchParams.get("to")
-
   // Determinar período de análise
   let dateFilter = {}
   if (fromDate && toDate) {
@@ -72,7 +67,6 @@ export async function GET(request: NextRequest) {
         break
     }
   }
-
   // Importar mock storage (em produção seria do banco)
   // Como não temos tabela Review, vamos simular com dados mock
   const mockReviews = [
@@ -164,7 +158,6 @@ export async function GET(request: NextRequest) {
       },
     },
   ]
-
   let filteredReviews = mockReviews.filter(review => {
     // Filtro de período
     if (Object.keys(dateFilter).length > 0) {
@@ -176,15 +169,12 @@ export async function GET(request: NextRequest) {
         })) return false
       }
     }
-
     // Filtro de rating
     if (rating && rating !== "all") {
       if (review.rating !== parseInt(rating)) return false
     }
-
     return true
   })
-
   // Aplicar ordenação
   filteredReviews = filteredReviews.sort((a, b) => {
     switch (sort) {
@@ -198,10 +188,8 @@ export async function GET(request: NextRequest) {
         return 0
     }
   })
-
   return NextResponse.json({
     success: true,
     data: filteredReviews,
   })
 }
-

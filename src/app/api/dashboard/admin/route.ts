@@ -38,9 +38,9 @@ export async function GET() {
       where: { status: "PENDING" }
     }),
 
-    // Terapeutas aguardando aprovação
+    // Terapeutas aguardando aprovação - campo correto é isVerified
     db.therapistProfile.count({
-      where: { verified: false }
+      where: { isVerified: false }
     }),
 
     // Sessões agendadas para hoje
@@ -53,10 +53,10 @@ export async function GET() {
       }
     }),
 
-    // Posts recentes
+    // Posts recentes - o campo name está em User, não em UserProfile
     db.post.findMany({
       include: {
-        author: { include: { profile: true } },
+        author: { select: { id: true, name: true, image: true } },
         _count: { select: { comments: true, votes: true } }
       },
       orderBy: { createdAt: "desc" },
@@ -75,12 +75,11 @@ export async function GET() {
     recentPosts: recentPosts.map(p => ({
       id: p.id,
       title: p.title,
-      authorName: p.author.profile?.name || "Usuário",
+      authorName: p.author.name || "Usuário",
+      authorImage: p.author.image,
       createdAt: p.createdAt,
       commentCount: p._count.comments,
       voteCount: p._count.votes
     }))
   })
 }
-
-

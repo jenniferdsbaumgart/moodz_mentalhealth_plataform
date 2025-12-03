@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-
 /**
  * DELETE /api/admin/posts/[id]
  * Delete a post (admin moderation)
@@ -12,23 +10,18 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     const admin = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const postId = params.id
-
     // Get post info before deletion for logging
     const post = await db.post.findUnique({
       where: { id: postId },
@@ -39,16 +32,13 @@ export async function DELETE(
         author: { select: { name: true, email: true } }
       }
     })
-
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 })
     }
-
     // Delete post (cascades to comments, votes, etc.)
     await db.post.delete({
       where: { id: postId }
     })
-
     // Log the action
     await db.auditLog.create({
       data: {
@@ -64,7 +54,6 @@ export async function DELETE(
         })
       }
     })
-
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error deleting post:", error)
@@ -74,7 +63,6 @@ export async function DELETE(
     )
   }
 }
-
 /**
  * GET /api/admin/posts/[id]
  * Get post details for moderation
@@ -84,21 +72,17 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     const admin = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const post = await db.post.findUnique({
       where: { id: params.id },
       include: {
@@ -131,11 +115,9 @@ export async function GET(
         }
       }
     })
-
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 })
     }
-
     return NextResponse.json(post)
   } catch (error) {
     console.error("Error fetching post:", error)

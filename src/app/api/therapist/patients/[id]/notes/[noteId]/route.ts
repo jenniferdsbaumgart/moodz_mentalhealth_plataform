@@ -1,34 +1,28 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db as prisma } from "@/lib/db"
-
 // PATCH - Editar nota
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string; noteId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session || session.user?.role !== "THERAPIST") {
       return NextResponse.json(
         { success: false, message: "Acesso negado" },
         { status: 403 }
       )
     }
-
     const { id, noteId } = params
     const body = await request.json()
     const { content, isPrivate } = body
-
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
         { success: false, message: "Conteúdo da nota é obrigatório" },
         { status: 400 }
       )
     }
-
     // Buscar perfil do terapeuta
     const therapistProfile = await prisma.therapistProfile.findUnique({
       where: {
@@ -38,29 +32,24 @@ export async function PATCH(
         id: true,
       },
     })
-
     if (!therapistProfile) {
       return NextResponse.json(
         { success: false, message: "Perfil de terapeuta não encontrado" },
         { status: 404 }
       )
     }
-
     // Importar mock storage (em produção seria do banco)
     const { mockPatientNotes } = require("../route")
-
     // Encontrar e atualizar a nota
     const noteIndex = mockPatientNotes.findIndex(
       note => note.id === noteId && note.therapistId === therapistProfile.id && note.patientId === id
     )
-
     if (noteIndex === -1) {
       return NextResponse.json(
         { success: false, message: "Nota não encontrada" },
         { status: 404 }
       )
     }
-
     // Atualizar nota
     mockPatientNotes[noteIndex] = {
       ...mockPatientNotes[noteIndex],
@@ -68,7 +57,6 @@ export async function PATCH(
       isPrivate: isPrivate ?? mockPatientNotes[noteIndex].isPrivate,
       updatedAt: new Date(),
     }
-
     return NextResponse.json({
       success: true,
       data: mockPatientNotes[noteIndex],
@@ -82,24 +70,20 @@ export async function PATCH(
     )
   }
 }
-
 // DELETE - Deletar nota
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string; noteId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session || session.user?.role !== "THERAPIST") {
       return NextResponse.json(
         { success: false, message: "Acesso negado" },
         { status: 403 }
       )
     }
-
     const { id, noteId } = params
-
     // Buscar perfil do terapeuta
     const therapistProfile = await prisma.therapistProfile.findUnique({
       where: {
@@ -109,32 +93,26 @@ export async function DELETE(
         id: true,
       },
     })
-
     if (!therapistProfile) {
       return NextResponse.json(
         { success: false, message: "Perfil de terapeuta não encontrado" },
         { status: 404 }
       )
     }
-
     // Importar mock storage (em produção seria do banco)
     const { mockPatientNotes } = require("../route")
-
     // Encontrar e remover a nota
     const noteIndex = mockPatientNotes.findIndex(
       note => note.id === noteId && note.therapistId === therapistProfile.id && note.patientId === id
     )
-
     if (noteIndex === -1) {
       return NextResponse.json(
         { success: false, message: "Nota não encontrada" },
         { status: 404 }
       )
     }
-
     // Remover nota
     const deletedNote = mockPatientNotes.splice(noteIndex, 1)[0]
-
     return NextResponse.json({
       success: true,
       message: "Nota removida com sucesso",
@@ -147,4 +125,3 @@ export async function DELETE(
     )
   }
 }
-

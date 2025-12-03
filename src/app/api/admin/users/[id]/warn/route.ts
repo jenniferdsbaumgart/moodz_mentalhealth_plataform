@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { createNotification } from "@/lib/notifications/service"
 import { NotificationType } from "@prisma/client"
-
 /**
  * POST /api/admin/users/[id]/warn
  * Send a warning to a user without banning
@@ -14,43 +12,35 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     // Check if user is admin
     const admin = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const userId = params.id
     const body = await request.json()
     const { reason, message, reportId } = body
-
     if (!reason) {
       return NextResponse.json(
         { error: "Reason is required" },
         { status: 400 }
       )
     }
-
     // Get user
     const user = await db.user.findUnique({
       where: { id: userId },
       select: { id: true, name: true, email: true }
     })
-
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
-
     // Create warning notification
     await createNotification({
       userId: userId,
@@ -59,7 +49,6 @@ export async function POST(
       message: message || `Você recebeu um aviso por: ${reason}. Por favor, revise as regras da comunidade.`,
       data: { link: "/community/rules", warningReason: reason }
     })
-
     // Log the warning
     await db.auditLog.create({
       data: {
@@ -76,7 +65,6 @@ export async function POST(
         })
       }
     })
-
     // If this is related to a report, update the report
     if (reportId) {
       await db.report.update({
@@ -87,7 +75,6 @@ export async function POST(
         }
       })
     }
-
     // Get warning count for this user
     const warningCount = await db.auditLog.count({
       where: {
@@ -96,7 +83,6 @@ export async function POST(
         entityId: userId
       }
     })
-
     return NextResponse.json({
       success: true,
       warningCount,
@@ -110,7 +96,6 @@ export async function POST(
     )
   }
 }
-
 /**
  * GET /api/admin/users/[id]/warn
  * Get warning history for a user
@@ -120,23 +105,18 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     const admin = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const userId = params.id
-
     const warnings = await db.auditLog.findMany({
       where: {
         action: "WARN",
@@ -153,7 +133,6 @@ export async function GET(
       },
       orderBy: { createdAt: "desc" }
     })
-
     return NextResponse.json({
       warnings: warnings.map(w => ({
         id: w.id,
@@ -171,4 +150,3 @@ export async function GET(
     )
   }
 }
-

@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db as prisma } from "@/lib/db"
 import { z } from "zod"
 import { notifyNewReview } from "@/lib/notifications/triggers"
-
 // Mock storage para reviews (em produção, seria uma tabela Review)
 let mockReviews: Array<{
   id: string
@@ -16,30 +14,25 @@ let mockReviews: Array<{
   isAnonymous: boolean
   createdAt: Date
 }> = []
-
 const createReviewSchema = z.object({
   rating: z.number().min(1).max(5),
   comment: z.string().optional(),
   isAnonymous: z.boolean().default(false),
 })
-
 // GET - Verificar se usuário já avaliou a sessão
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user) {
       return NextResponse.json(
         { success: false, message: "Não autenticado" },
         { status: 401 }
       )
     }
-
     const { id } = params
-
     // Verificar se a sessão existe e foi concluída
     const groupSession = await prisma.groupSession.findUnique({
       where: { id },
@@ -49,21 +42,18 @@ export async function GET(
         therapistId: true,
       },
     })
-
     if (!groupSession) {
       return NextResponse.json(
         { success: false, message: "Sessão não encontrada" },
         { status: 404 }
       )
     }
-
     if (groupSession.status !== "COMPLETED") {
       return NextResponse.json(
         { success: false, message: "Sessão ainda não foi concluída" },
         { status: 400 }
       )
     }
-
     // Verificar se usuário participou da sessão
     const participation = await prisma.sessionParticipant.findFirst({
       where: {
@@ -71,19 +61,16 @@ export async function GET(
         userId: session.user.id,
       },
     })
-
     if (!participation) {
       return NextResponse.json(
         { success: false, message: "Você não participou desta sessão" },
         { status: 403 }
       )
     }
-
     // Verificar se já existe uma avaliação (mock)
     const existingReview = mockReviews.find(
       review => review.sessionId === id && review.patientId === session.user.id
     )
-
     return NextResponse.json({
       success: true,
       data: {
@@ -100,26 +87,22 @@ export async function GET(
     )
   }
 }
-
 // POST - Criar avaliação da sessão
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const userSession = await getServerSession(authOptions)
-
+    const userSession = await auth()
     if (!userSession?.user) {
       return NextResponse.json(
         { success: false, message: "Não autenticado" },
         { status: 401 }
       )
     }
-
     const { id } = params
     const body = await request.json()
     const validatedData = createReviewSchema.parse(body)
-
     // Verificar se a sessão existe e foi concluída
     const groupSession = await prisma.groupSession.findUnique({
       where: { id },
@@ -130,21 +113,18 @@ export async function POST(
         title: true,
       },
     })
-
     if (!groupSession) {
       return NextResponse.json(
         { success: false, message: "Sessão não encontrada" },
         { status: 404 }
       )
     }
-
     if (groupSession.status !== "COMPLETED") {
       return NextResponse.json(
         { success: false, message: "Sessão ainda não foi concluída" },
         { status: 400 }
       )
     }
-
     // Verificar se usuário participou da sessão
     const participation = await prisma.sessionParticipant.findFirst({
       where: {
@@ -152,26 +132,22 @@ export async function POST(
         userId: userSession.user.id,
       },
     })
-
     if (!participation) {
       return NextResponse.json(
         { success: false, message: "Você não participou desta sessão" },
         { status: 403 }
       )
     }
-
     // Verificar se já existe uma avaliação
     const existingReview = mockReviews.find(
       review => review.sessionId === id && review.patientId === userSession.user.id
     )
-
     if (existingReview) {
       return NextResponse.json(
         { success: false, message: "Você já avaliou esta sessão" },
         { status: 409 }
       )
     }
-
     // Criar avaliação (mock)
     const newReview = {
       id: `review-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -183,20 +159,16 @@ export async function POST(
       isAnonymous: validatedData.isAnonymous,
       createdAt: new Date(),
     }
-
     mockReviews.push(newReview)
-
     // Get therapist userId to send notification
     const therapist = await prisma.therapistProfile.findUnique({
       where: { id: groupSession.therapistId },
       select: { userId: true }
     })
-
     // Notify therapist about new review (non-blocking)
     if (therapist) {
       notifyNewReview(therapist.userId, newReview.id).catch(console.error)
     }
-
     return NextResponse.json({
       success: true,
       data: newReview,
@@ -204,7 +176,6 @@ export async function POST(
     }, { status: 201 })
   } catch (error) {
     console.error("Erro ao criar avaliação:", error)
-
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
@@ -215,11 +186,9 @@ export async function POST(
         { status: 400 }
       )
     }
-
     return NextResponse.json(
       { success: false, message: "Erro interno do servidor" },
       { status: 500 }
     )
   }
 }
-

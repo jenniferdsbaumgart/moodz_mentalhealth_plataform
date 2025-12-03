@@ -1,24 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db as prisma } from "@/lib/db"
-
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session || session.user?.role !== "THERAPIST") {
       return NextResponse.json(
         { success: false, message: "Acesso negado" },
         { status: 403 }
       )
     }
-
     const { id } = params
-
     // Buscar perfil do terapeuta
     const therapistProfile = await prisma.therapistProfile.findUnique({
       where: {
@@ -28,14 +23,12 @@ export async function GET(
         id: true,
       },
     })
-
     if (!therapistProfile) {
       return NextResponse.json(
         { success: false, message: "Perfil de terapeuta não encontrado" },
         { status: 404 }
       )
     }
-
     // Verificar se o paciente participou de sessões do terapeuta
     const hasAccess = await prisma.sessionParticipant.findFirst({
       where: {
@@ -45,14 +38,12 @@ export async function GET(
         },
       },
     })
-
     if (!hasAccess) {
       return NextResponse.json(
         { success: false, message: "Acesso negado a sessões deste paciente" },
         { status: 403 }
       )
     }
-
     // Buscar todas as sessões do paciente com este terapeuta
     const sessions = await prisma.sessionParticipant.findMany({
       where: {
@@ -88,11 +79,9 @@ export async function GET(
         },
       },
     })
-
     // Formatar dados das sessões
     const formattedSessions = sessions.map((participation) => {
       const session = participation.session
-
       return {
         id: session.id,
         title: session.title,
@@ -114,7 +103,6 @@ export async function GET(
         _count: session._count,
       }
     })
-
     return NextResponse.json({
       success: true,
       data: formattedSessions,
@@ -127,4 +115,3 @@ export async function GET(
     )
   }
 }
-

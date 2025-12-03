@@ -1,33 +1,26 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { registerPushSubscription } from "@/lib/notifications/push"
-
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user) {
       return NextResponse.json(
         { success: false, message: "Not authenticated" },
         { status: 401 }
       )
     }
-
     const body = await request.json()
     const { subscription } = body
-
     if (!subscription || !subscription.endpoint || !subscription.keys) {
       return NextResponse.json(
         { success: false, message: "Invalid subscription data" },
         { status: 400 }
       )
     }
-
     // Register the subscription
     const success = await registerPushSubscription(session.user.id, subscription)
-
     if (success) {
       return NextResponse.json({
         success: true,
@@ -47,4 +40,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

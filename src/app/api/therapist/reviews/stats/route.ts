@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db as prisma } from "@/lib/db"
 import {
   format,
@@ -15,18 +14,14 @@ import {
   endOfYear,
   parseISO
 } from "date-fns"
-
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions)
-
+  const session = await auth()
   if (!session?.user || session.user.role !== "THERAPIST") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-
   const therapistId = session.user.id
   const { searchParams } = new URL(request.url)
   const period = searchParams.get("period") || "all"
-
   // Mock data para estatísticas (em produção seria calculado do banco)
   const mockStats = {
     totalReviews: 24,
@@ -62,10 +57,8 @@ export async function GET(request: NextRequest) {
       { date: "Fev/2024", averageRating: 4.3, totalRatings: 4 },
     ],
   }
-
   // Ajustar dados baseado no período
   let adjustedStats = { ...mockStats }
-
   switch (period) {
     case "month":
       adjustedStats = {
@@ -89,7 +82,6 @@ export async function GET(request: NextRequest) {
       }
       break
   }
-
   return NextResponse.json({
     success: true,
     data: {
@@ -102,4 +94,3 @@ export async function GET(request: NextRequest) {
     },
   })
 }
-

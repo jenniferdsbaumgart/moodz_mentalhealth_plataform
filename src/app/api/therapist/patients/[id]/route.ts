@@ -1,24 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db as prisma } from "@/lib/db"
-
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session || session.user?.role !== "THERAPIST") {
       return NextResponse.json(
         { success: false, message: "Acesso negado" },
         { status: 403 }
       )
     }
-
     const { id } = params
-
     // Buscar perfil do terapeuta
     const therapistProfile = await prisma.therapistProfile.findUnique({
       where: {
@@ -28,14 +23,12 @@ export async function GET(
         id: true,
       },
     })
-
     if (!therapistProfile) {
       return NextResponse.json(
         { success: false, message: "Perfil de terapeuta não encontrado" },
         { status: 404 }
       )
     }
-
     // Verificar se o paciente participou de sessões do terapeuta
     const patientParticipation = await prisma.sessionParticipant.findFirst({
       where: {
@@ -45,14 +38,12 @@ export async function GET(
         },
       },
     })
-
     if (!patientParticipation) {
       return NextResponse.json(
         { success: false, message: "Paciente não encontrado ou sem participação em suas sessões" },
         { status: 404 }
       )
     }
-
     // Buscar dados completos do paciente
     const patient = await prisma.user.findUnique({
       where: {
@@ -78,14 +69,12 @@ export async function GET(
         },
       },
     })
-
     if (!patient) {
       return NextResponse.json(
         { success: false, message: "Paciente não encontrado" },
         { status: 404 }
       )
     }
-
     // Buscar estatísticas das sessões
     const sessionStats = await prisma.sessionParticipant.groupBy({
       by: ["userId"],
@@ -99,9 +88,7 @@ export async function GET(
         sessionId: true,
       },
     })
-
     const totalSessions = sessionStats[0]?._count.sessionId || 0
-
     // Buscar sessões concluídas
     const completedSessions = await prisma.sessionParticipant.count({
       where: {
@@ -112,7 +99,6 @@ export async function GET(
         },
       },
     })
-
     // Buscar última sessão
     const lastSession = await prisma.sessionParticipant.findFirst({
       where: {
@@ -130,12 +116,10 @@ export async function GET(
         },
       },
     })
-
     // Calcular dias desde última sessão
     const daysSinceLastSession = lastSession
       ? Math.floor((new Date().getTime() - new Date(lastSession.session.scheduledAt).getTime()) / (1000 * 60 * 60 * 24))
       : null
-
     // Formatar dados do paciente
     const patientData = {
       id: patient.id,
@@ -145,23 +129,19 @@ export async function GET(
       phone: patient.profile?.phone || null,
       birthDate: patient.profile?.birthDate || null,
       bio: patient.profile?.bio || null,
-
       // Estatísticas
       totalSessions,
       completedSessions,
       avgRating: 0, // TODO: implementar sistema de avaliações
       daysSinceLastSession,
       lastSessionDate: lastSession?.session.scheduledAt || null,
-
       // Preferências
       preferredCategories: patient.patientProfile?.preferredCategories || [],
       emailNotifications: patient.patientProfile?.preferences?.emailNotifications ?? true,
       sessionReminders: patient.patientProfile?.preferences?.sessionReminders ?? true,
-
       // Status
       isActive: daysSinceLastSession !== null && daysSinceLastSession <= 30,
     }
-
     return NextResponse.json({
       success: true,
       data: patientData,
@@ -174,4 +154,3 @@ export async function GET(
     )
   }
 }
-

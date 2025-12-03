@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { createNotification } from "@/lib/notifications/service"
 import { NotificationType } from "@prisma/client"
-
 // Test notification content for each type
 const testNotifications: Record<string, { title: string; message: string; data?: Record<string, any> }> = {
   // Patient session notifications
@@ -22,7 +20,6 @@ const testNotifications: Record<string, { title: string; message: string; data?:
     message: "Infelizmente, sua sessão de hoje foi cancelada. Entre em contato para reagendar.",
     data: { sessionId: "test-session", link: "/sessions" }
   },
-  
   // Therapist session notifications
   SESSION_REMINDER_THERAPIST: {
     title: "⏰ Lembrete: Sessão em 1 hora",
@@ -34,14 +31,12 @@ const testNotifications: Record<string, { title: string; message: string; data?:
     message: "Maria Silva se inscreveu na sessão 'Mindfulness para Iniciantes'. 2 vagas restantes.",
     data: { sessionId: "test-session", link: "/therapist/sessions", patientName: "Maria Silva", spotsLeft: 2 }
   },
-  
   // Communication
   NEW_MESSAGE: {
     title: "Nova mensagem",
     message: "Você recebeu uma nova mensagem de Dr. Silva.",
     data: { link: "/messages" }
   },
-  
   // Gamification
   NEW_BADGE: {
     title: "🏆 Novo badge conquistado!",
@@ -58,7 +53,6 @@ const testNotifications: Record<string, { title: string; message: string; data?:
     message: "Incrível! Você manteve seu streak por mais um dia. Continue assim!",
     data: { streakDays: 7, link: "/dashboard" }
   },
-  
   // Community
   NEW_POST_REPLY: {
     title: "Nova resposta no seu post",
@@ -70,7 +64,6 @@ const testNotifications: Record<string, { title: string; message: string; data?:
     message: "Alguém gostou do seu post na comunidade.",
     data: { postId: "test-post", link: "/community" }
   },
-  
   // Therapist specific
   THERAPIST_APPROVED: {
     title: "✅ Perfil aprovado!",
@@ -87,7 +80,6 @@ const testNotifications: Record<string, { title: string; message: string; data?:
     message: "João Santos completou 10 sessões! Parabéns pelo progresso do seu paciente.",
     data: { patientId: "test-patient", link: "/therapist/patients", milestoneType: "sessions", milestoneValue: 10 }
   },
-  
   // System
   SYSTEM_ANNOUNCEMENT: {
     title: "📢 Novidades na Moodz",
@@ -100,41 +92,34 @@ const testNotifications: Record<string, { title: string; message: string; data?:
     data: { link: "/dashboard" }
   }
 }
-
 /**
  * POST /api/notifications/test
  * Send a test notification of a specific type
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       )
     }
-
     const body = await request.json()
     const { type } = body
-
     if (!type || !Object.values(NotificationType).includes(type as NotificationType)) {
       return NextResponse.json(
         { error: "Invalid notification type" },
         { status: 400 }
       )
     }
-
     const testContent = testNotifications[type]
-
     if (!testContent) {
       return NextResponse.json(
         { error: "Test content not available for this type" },
         { status: 400 }
       )
     }
-
     // Create the test notification
     const result = await createNotification({
       userId: session.user.id,
@@ -143,7 +128,6 @@ export async function POST(request: NextRequest) {
       message: testContent.message,
       data: testContent.data
     })
-
     return NextResponse.json({
       success: true,
       channels: result
@@ -156,4 +140,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

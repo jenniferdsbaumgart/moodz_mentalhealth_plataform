@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-
 interface SearchResult {
   id: string
   type: "post" | "session" | "user" | "blog" | "therapist"
@@ -11,9 +9,7 @@ interface SearchResult {
   url: string
   relevance?: number
 }
-
 type SearchType = "post" | "session" | "user" | "blog" | "therapist"
-
 /**
  * GET /api/search
  * Global search across posts, sessions, users, blog posts, and therapists
@@ -25,25 +21,21 @@ type SearchType = "post" | "session" | "user" | "blog" | "therapist"
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     const { searchParams } = new URL(request.url)
     const query = searchParams.get("q")
     const type = searchParams.get("type") as SearchType | null
     const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 50)
-
     if (!query || query.length < 2) {
       return NextResponse.json({ results: [], query: query || "" })
     }
-
     const results: SearchResult[] = []
     const searchTerm = query.toLowerCase()
     const perTypeLimit = type ? limit : Math.ceil(limit / 4)
-
     // Helper to calculate relevance score
     const calculateRelevance = (title: string, content?: string): number => {
       const titleLower = title.toLowerCase()
       let score = 0
-      
       // Exact title match
       if (titleLower === searchTerm) score += 100
       // Title starts with search term
@@ -52,10 +44,8 @@ export async function GET(request: NextRequest) {
       else if (titleLower.includes(searchTerm)) score += 60
       // Content contains search term
       else if (content?.toLowerCase().includes(searchTerm)) score += 40
-      
       return score
     }
-
     // Search posts (community)
     if (!type || type === "post") {
       try {
@@ -76,7 +66,6 @@ export async function GET(request: NextRequest) {
           take: perTypeLimit,
           orderBy: { createdAt: "desc" },
         })
-
         posts.forEach((post) => {
           results.push({
             id: post.id,
@@ -91,7 +80,6 @@ export async function GET(request: NextRequest) {
         console.error("Error searching posts:", e)
       }
     }
-
     // Search sessions (upcoming)
     if (!type || type === "session") {
       try {
@@ -119,7 +107,6 @@ export async function GET(request: NextRequest) {
           take: perTypeLimit,
           orderBy: { scheduledAt: "asc" },
         })
-
         sessions.forEach((session) => {
           const date = new Date(session.scheduledAt).toLocaleDateString("pt-BR", {
             day: "2-digit",
@@ -140,7 +127,6 @@ export async function GET(request: NextRequest) {
         console.error("Error searching sessions:", e)
       }
     }
-
     // Search therapists (verified only)
     if (!type || type === "therapist") {
       try {
@@ -162,7 +148,6 @@ export async function GET(request: NextRequest) {
           },
           take: perTypeLimit,
         })
-
         therapists.forEach((therapist) => {
           const name = therapist.user.name || "Terapeuta"
           results.push({
@@ -178,7 +163,6 @@ export async function GET(request: NextRequest) {
         console.error("Error searching therapists:", e)
       }
     }
-
     // Search blog posts
     if (!type || type === "blog") {
       try {
@@ -199,7 +183,6 @@ export async function GET(request: NextRequest) {
           take: perTypeLimit,
           orderBy: { publishedAt: "desc" },
         })
-
         blogPosts.forEach((post) => {
           results.push({
             id: post.id,
@@ -214,7 +197,6 @@ export async function GET(request: NextRequest) {
         console.error("Error searching blog posts:", e)
       }
     }
-
     // Search users (only for admins)
     const userRole = (session?.user as any)?.role
     if ((!type || type === "user") && (userRole === "ADMIN" || userRole === "SUPER_ADMIN")) {
@@ -235,7 +217,6 @@ export async function GET(request: NextRequest) {
           },
           take: perTypeLimit,
         })
-
         users.forEach((user) => {
           const displayName = user.name || user.email
           results.push({
@@ -251,20 +232,16 @@ export async function GET(request: NextRequest) {
         console.error("Error searching users:", e)
       }
     }
-
     // Sort results by relevance (higher score first, then alphabetically)
     const sortedResults = results.sort((a, b) => {
       // First by relevance score
       const relevanceDiff = (b.relevance || 0) - (a.relevance || 0)
       if (relevanceDiff !== 0) return relevanceDiff
-      
       // Then alphabetically by title
       return a.title.localeCompare(b.title)
     })
-
     // Remove relevance from response (internal use only)
     const cleanResults = sortedResults.slice(0, limit).map(({ relevance, ...rest }) => rest)
-
     return NextResponse.json({
       results: cleanResults,
       total: sortedResults.length,

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-
 /**
  * POST /api/notifications/[id]/read
  * Mark a specific notification as read
@@ -12,15 +10,13 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       )
     }
-
     // Verify the notification belongs to the user
     const existingNotification = await db.notification.findUnique({
       where: {
@@ -28,14 +24,12 @@ export async function POST(
         userId: session.user.id
       }
     })
-
     if (!existingNotification) {
       return NextResponse.json(
         { error: "Notification not found" },
         { status: 404 }
       )
     }
-
     // If already read, just return success
     if (existingNotification.read) {
       return NextResponse.json({
@@ -43,7 +37,6 @@ export async function POST(
         notification: existingNotification
       })
     }
-
     // Mark as read
     const notification = await db.notification.update({
       where: { id: params.id },
@@ -52,7 +45,6 @@ export async function POST(
         readAt: new Date()
       }
     })
-
     return NextResponse.json({
       success: true,
       notification
@@ -65,4 +57,3 @@ export async function POST(
     )
   }
 }
-

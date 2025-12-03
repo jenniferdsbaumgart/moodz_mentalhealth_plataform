@@ -1,35 +1,28 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-
 /**
  * GET /api/admin/moderation/stats
  * Get moderation statistics and metrics
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     // Check if user is admin
     const admin = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-
     // Get report counts by status
     const [
       pendingCount,
@@ -44,14 +37,12 @@ export async function GET(request: NextRequest) {
       db.report.count({ where: { status: "DISMISSED" } }),
       db.report.count()
     ])
-
     // Get reports by reason/type
     const reportsByReason = await db.report.groupBy({
       by: ["reason"],
       _count: { id: true },
       where: { status: "PENDING" }
     })
-
     // Get resolved today
     const resolvedToday = await db.report.count({
       where: {
@@ -59,7 +50,6 @@ export async function GET(request: NextRequest) {
         status: { in: ["RESOLVED", "DISMISSED"] }
       }
     })
-
     // Get resolved this week
     const resolvedThisWeek = await db.report.count({
       where: {
@@ -67,7 +57,6 @@ export async function GET(request: NextRequest) {
         status: { in: ["RESOLVED", "DISMISSED"] }
       }
     })
-
     // Calculate average resolution time (for resolved reports this month)
     const resolvedReports = await db.report.findMany({
       where: {
@@ -79,7 +68,6 @@ export async function GET(request: NextRequest) {
         resolvedAt: true
       }
     })
-
     let avgResolutionTime = 0
     if (resolvedReports.length > 0) {
       const totalTime = resolvedReports.reduce((sum, report) => {
@@ -90,7 +78,6 @@ export async function GET(request: NextRequest) {
       }, 0)
       avgResolutionTime = totalTime / resolvedReports.length / (1000 * 60 * 60) // Convert to hours
     }
-
     // Get most active moderators
     const moderatorActions = await db.auditLog.groupBy({
       by: ["userId"],
@@ -102,14 +89,12 @@ export async function GET(request: NextRequest) {
       orderBy: { _count: { id: "desc" } },
       take: 5
     })
-
     // Get moderator details
     const moderatorIds = moderatorActions.map(m => m.userId)
     const moderators = await db.user.findMany({
       where: { id: { in: moderatorIds } },
       select: { id: true, name: true, image: true }
     })
-
     const topModerators = moderatorActions.map(action => {
       const moderator = moderators.find(m => m.id === action.userId)
       return {
@@ -119,23 +104,19 @@ export async function GET(request: NextRequest) {
         actionsCount: action._count.id
       }
     })
-
     // Get banned users count
     const bannedUsersCount = await db.user.count({
       where: { status: "BANNED" }
     })
-
     // Get suspended users count
     const suspendedUsersCount = await db.user.count({
       where: { status: "SUSPENDED" }
     })
-
     // Get content stats
     const [totalPosts, totalComments] = await Promise.all([
       db.post.count(),
       db.comment.count()
     ])
-
     // Priority queue - reports sorted by severity
     const priorityMapping: Record<string, number> = {
       "SELF_HARM": 1,
@@ -147,24 +128,20 @@ export async function GET(request: NextRequest) {
       "SPAM": 5,
       "OTHER": 6
     }
-
     const pendingReportsByPriority = await db.report.findMany({
       where: { status: "PENDING" },
       select: { reason: true }
     })
-
     const priorityBreakdown = {
       critical: pendingReportsByPriority.filter(r => ["SELF_HARM", "SUICIDE"].includes(r.reason)).length,
       high: pendingReportsByPriority.filter(r => ["VIOLENCE", "HATE_SPEECH"].includes(r.reason)).length,
       medium: pendingReportsByPriority.filter(r => ["HARASSMENT", "INAPPROPRIATE"].includes(r.reason)).length,
       low: pendingReportsByPriority.filter(r => ["SPAM", "OTHER"].includes(r.reason)).length
     }
-
     // Resolution rate
     const resolutionRate = totalReports > 0 
       ? Math.round(((resolvedCount + dismissedCount) / totalReports) * 100)
       : 0
-
     return NextResponse.json({
       overview: {
         pendingReports: pendingCount,
@@ -198,4 +175,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-

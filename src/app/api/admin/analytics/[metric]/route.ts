@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-
 /**
  * GET /api/admin/analytics/[metric]
  * Get detailed analytics for a specific metric
@@ -12,30 +10,24 @@ export async function GET(
   { params }: { params: { metric: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     // Check if user is admin
     const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (user?.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const { searchParams } = new URL(request.url)
     const period = searchParams.get("period") || "30d"
     const metric = params.metric
-
     // Calculate date range
     const now = new Date()
     let startDate: Date
-
     switch (period) {
       case "7d":
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
@@ -52,9 +44,7 @@ export async function GET(
       default:
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     }
-
     let data: any
-
     switch (metric) {
       case "users":
         data = await getUsersMetrics(startDate, now)
@@ -80,7 +70,6 @@ export async function GET(
           { status: 400 }
         )
     }
-
     return NextResponse.json({
       metric,
       period,
@@ -95,7 +84,6 @@ export async function GET(
     )
   }
 }
-
 async function getUsersMetrics(startDate: Date, endDate: Date) {
   const [
     total,
@@ -143,7 +131,6 @@ async function getUsersMetrics(startDate: Date, endDate: Date) {
       take: 10
     })
   ])
-
   return {
     total,
     newInPeriod,
@@ -167,7 +154,6 @@ async function getUsersMetrics(startDate: Date, endDate: Date) {
     }))
   }
 }
-
 async function getSessionsMetrics(startDate: Date, endDate: Date) {
   const [
     total,
@@ -208,7 +194,6 @@ async function getSessionsMetrics(startDate: Date, endDate: Date) {
       take: 10
     })
   ])
-
   return {
     total,
     inPeriod,
@@ -230,7 +215,6 @@ async function getSessionsMetrics(startDate: Date, endDate: Date) {
     }))
   }
 }
-
 async function getCommunityMetrics(startDate: Date, endDate: Date) {
   const [
     totalPosts,
@@ -275,7 +259,6 @@ async function getCommunityMetrics(startDate: Date, endDate: Date) {
       take: 10
     })
   ])
-
   return {
     totalPosts,
     postsInPeriod,
@@ -295,7 +278,6 @@ async function getCommunityMetrics(startDate: Date, endDate: Date) {
     }))
   }
 }
-
 async function getWellnessMetrics(startDate: Date, endDate: Date) {
   const [
     moodEntries,
@@ -322,7 +304,6 @@ async function getWellnessMetrics(startDate: Date, endDate: Date) {
       _count: { id: true }
     })
   ])
-
   return {
     moodEntries,
     journalEntries,
@@ -332,7 +313,6 @@ async function getWellnessMetrics(startDate: Date, endDate: Date) {
     exercisesByType
   }
 }
-
 async function getGamificationMetrics(startDate: Date, endDate: Date) {
   const [
     badgesEarned,
@@ -375,7 +355,6 @@ async function getGamificationMetrics(startDate: Date, endDate: Date) {
       take: 10
     })
   ])
-
   return {
     badgesEarned,
     totalPoints: totalPoints._sum.points || 0,
@@ -394,7 +373,6 @@ async function getGamificationMetrics(startDate: Date, endDate: Date) {
     }))
   }
 }
-
 async function getMoodMetrics(startDate: Date, endDate: Date) {
   const [
     totalEntries,
@@ -433,7 +411,6 @@ async function getMoodMetrics(startDate: Date, endDate: Date) {
       LIMIT 10
     `
   ])
-
   return {
     totalEntries,
     avgMood: avgMood._avg.moodScore || 0,
@@ -445,4 +422,3 @@ async function getMoodMetrics(startDate: Date, endDate: Date) {
     topFactors
   }
 }
-

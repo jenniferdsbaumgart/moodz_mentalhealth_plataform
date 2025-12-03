@@ -8,7 +8,30 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const therapistId = session.user.id
+  const userId = session.user.id
+
+  // Buscar TherapistProfile primeiro para obter o therapistId correto
+  // GroupSession.therapistId referencia TherapistProfile.id, não User.id
+  const therapistProfile = await db.therapistProfile.findUnique({
+    where: { userId },
+    select: { id: true }
+  })
+
+  // Se não tem perfil de terapeuta, retornar dados vazios
+  if (!therapistProfile) {
+    return NextResponse.json({
+      upcomingSessions: [],
+      stats: {
+        totalPatients: 0,
+        sessionsThisMonth: 0,
+        upcomingCount: 0,
+        nextSessionDate: null
+      },
+      recentSessions: []
+    })
+  }
+
+  const therapistId = therapistProfile.id
 
   const [
     upcomingSessions,
@@ -87,5 +110,3 @@ export async function GET() {
     }))
   })
 }
-
-

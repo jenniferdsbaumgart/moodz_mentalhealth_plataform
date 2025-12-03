@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-
 /**
  * GET /api/admin/users/[id]/activity
  * Get detailed activity history for a user
@@ -12,24 +10,19 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
     // Check if user is admin
     const admin = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-
     if (admin?.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-
     const userId = params.id
-
     // Fetch user with all related data
     const [
       user,
@@ -62,7 +55,6 @@ export async function GET(
           }
         }
       }),
-
       // Posts
       db.post.findMany({
         where: { authorId: userId },
@@ -76,7 +68,6 @@ export async function GET(
         orderBy: { createdAt: "desc" },
         take: 20
       }),
-
       // Comments
       db.comment.findMany({
         where: { authorId: userId },
@@ -89,7 +80,6 @@ export async function GET(
         orderBy: { createdAt: "desc" },
         take: 20
       }),
-
       // Sessions participated
       db.sessionParticipant.findMany({
         where: { userId: userId },
@@ -110,7 +100,6 @@ export async function GET(
         orderBy: { joinedAt: "desc" },
         take: 20
       }),
-
       // Reports received (against this user's content)
       db.report.findMany({
         where: {
@@ -129,7 +118,6 @@ export async function GET(
         orderBy: { createdAt: "desc" },
         take: 20
       }),
-
       // Reports submitted by user
       db.report.findMany({
         where: { reporterId: userId },
@@ -143,7 +131,6 @@ export async function GET(
         orderBy: { createdAt: "desc" },
         take: 10
       }),
-
       // Badges earned
       db.userBadge.findMany({
         where: { userId: userId },
@@ -161,7 +148,6 @@ export async function GET(
         },
         orderBy: { earnedAt: "desc" }
       }),
-
       // Mood logs (last 30)
       db.userMoodLog.findMany({
         where: { userId: userId },
@@ -174,7 +160,6 @@ export async function GET(
         orderBy: { createdAt: "desc" },
         take: 30
       }),
-
       // Audit logs for this user
       db.auditLog.findMany({
         where: {
@@ -195,11 +180,9 @@ export async function GET(
         take: 50
       })
     ])
-
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
-
     // Calculate stats
     const stats = {
       totalPosts: posts.length,
@@ -212,7 +195,6 @@ export async function GET(
         ? moodLogs.reduce((sum, log) => sum + log.moodScore, 0) / moodLogs.length
         : null
     }
-
     // Build activity timeline
     const timeline = [
       ...posts.map(p => ({
@@ -245,7 +227,6 @@ export async function GET(
       }))
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 50)
-
     return NextResponse.json({
       user,
       stats,
@@ -269,4 +250,3 @@ export async function GET(
     )
   }
 }
-

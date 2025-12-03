@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { sendPushNotification } from "@/lib/notifications/push"
-
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-
+    const session = await auth()
     if (!session?.user) {
       return NextResponse.json(
         { success: false, message: "Not authenticated" },
         { status: 401 }
       )
     }
-
     // Send a test push notification
     await sendPushNotification(
       session.user.id,
@@ -24,7 +20,6 @@ export async function POST(request: NextRequest) {
         test: true
       }
     )
-
     return NextResponse.json({
       success: true,
       message: "Test notification sent successfully"
@@ -37,4 +32,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

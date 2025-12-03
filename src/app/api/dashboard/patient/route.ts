@@ -10,12 +10,34 @@ export async function GET() {
 
   const userId = session.user.id
 
+  // Buscar PatientProfile primeiro para obter o patientId correto
+  const patientProfile = await db.patientProfile.findUnique({
+    where: { userId },
+    select: { id: true, points: true, level: true, streak: true }
+  })
+
+  // Se não tem perfil de paciente, retornar dados vazios
+  if (!patientProfile) {
+    return NextResponse.json({
+      upcomingSessions: [],
+      moodTrend: [],
+      recentBadges: [],
+      stats: {
+        points: 0,
+        level: 1,
+        streak: 0,
+        hasCheckedInToday: false
+      }
+    })
+  }
+
+  const patientId = patientProfile.id
+
   // Buscar dados em paralelo
   const [
     upcomingSessions,
     recentMoods,
     recentBadges,
-    profile,
     streakData
   ] = await Promise.all([
     // Próximas sessões inscritas
@@ -29,17 +51,21 @@ export async function GET() {
       },
       include: {
         session: {
-          include: { therapist: { include: { profile: true } } }
+          include: { 
+            therapist: { 
+              include: { user: { select: { name: true } } } 
+            } 
+          }
         }
       },
       orderBy: { session: { scheduledAt: "asc" } },
       take: 3
     }),
 
-    // Mood entries dos últimos 7 dias
+    // Mood entries dos últimos 7 dias - usando patientId correto
     db.moodEntry.findMany({
       where: {
-        userId,
+        patientId,
         createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
       },
       orderBy: { createdAt: "desc" },
@@ -54,16 +80,10 @@ export async function GET() {
       take: 3
     }),
 
-    // Perfil com pontos e nível
-    db.patientProfile.findUnique({
-      where: { userId },
-      select: { points: true, level: true, streak: true }
-    }),
-
-    // Verificar streak atual
+    // Verificar streak atual - usando patientId correto
     db.moodEntry.findFirst({
       where: {
-        userId,
+        patientId,
         createdAt: {
           gte: new Date(new Date().setHours(0, 0, 0, 0) - 24 * 60 * 60 * 1000)
         }
@@ -76,12 +96,12 @@ export async function GET() {
       id: p.session.id,
       title: p.session.title,
       scheduledAt: p.session.scheduledAt,
-      therapistName: p.session.therapist.profile?.name || "Terapeuta"
+      therapistName: p.session.therapist.user?.name || "Terapeuta"
     })),
     moodTrend: recentMoods.map(m => ({
       date: m.createdAt,
-      value: m.value,
-      emotion: m.emotion
+      value: m.mood,
+      emotions: m.emotions
     })),
     recentBadges: recentBadges.map(ub => ({
       id: ub.badge.id,
@@ -90,12 +110,10 @@ export async function GET() {
       earnedAt: ub.unlockedAt
     })),
     stats: {
-      points: profile?.points || 0,
-      level: profile?.level || 1,
-      streak: profile?.streak || 0,
+      points: patientProfile.points,
+      level: patientProfile.level,
+      streak: patientProfile.streak,
       hasCheckedInToday: !!streakData
     }
   })
 }
-
-

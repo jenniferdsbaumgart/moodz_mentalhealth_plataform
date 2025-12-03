@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { communityFiltersSchema, createPostSchema } from "@/lib/validations/community"
 import { Prisma } from "@prisma/client"
+import { rateLimit } from "@/lib/rate-limit/middleware"
 
 const POSTS_PER_PAGE = 20
 
@@ -182,6 +183,14 @@ export async function POST(request: NextRequest) {
         { error: "Não autorizado" },
         { status: 401 }
       )
+    }
+
+    // Rate limiting for post creation
+    const { allowed, response: rateLimitResponse } = await rateLimit(request, {
+      userId: session.user.id,
+    })
+    if (!allowed) {
+      return rateLimitResponse
     }
 
     const body = await request.json()
