@@ -1,13 +1,15 @@
+"use client"
+
 import { Suspense } from "react"
 import { PatientsList } from "@/components/therapist/patients-list"
+import { PatientsStats } from "@/components/therapist/patients-stats"
 import { DashboardShell } from "@/components/layout/dashboard-shell"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
-import { Download, Users, TrendingUp } from "lucide-react"
+import { Download } from "lucide-react"
 
 export default function TherapistPatientsPage() {
   const handleExportPatients = () => {
-    // Implementar export CSV
     window.open("/api/therapist/patients/export", "_blank")
   }
 
@@ -31,37 +33,7 @@ export default function TherapistPatientsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="bg-white rounded-lg p-6 shadow-sm border">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total de Pacientes</p>
-                <p className="text-2xl font-bold">--</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border">
-            <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Sessões Este Mês</p>
-                <p className="text-2xl font-bold">--</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-purple-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pacientes Ativos</p>
-                <p className="text-2xl font-bold">--</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <PatientsStats />
 
         <Suspense fallback={<Skeleton className="h-96 w-full" />}>
           <PatientsList />

@@ -14,7 +14,10 @@ export default async function SuperAdminLayout({
     redirect("/login")
   }
 
-  if (session.user.role !== Role.SUPER_ADMIN) {
+  // Apenas SUPER_ADMIN pode acessar esta área
+  const allowedRoles: string[] = [Role.SUPER_ADMIN]
+  
+  if (!allowedRoles.includes(session.user.role)) {
     redirect("/unauthorized")
   }
 
@@ -24,4 +27,3 @@ export default async function SuperAdminLayout({
     </DashboardShell>
   )
 }
-

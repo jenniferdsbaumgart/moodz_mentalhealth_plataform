@@ -14,7 +14,11 @@ export default async function PlatformLayout({
     redirect("/login")
   }
 
-  if (session.user.role !== Role.PATIENT) {
+  // PATIENT, ADMIN e SUPER_ADMIN podem acessar esta área
+  // (Admins podem querer ver a experiência do paciente)
+  const allowedRoles: string[] = [Role.PATIENT, Role.ADMIN, Role.SUPER_ADMIN]
+  
+  if (!allowedRoles.includes(session.user.role)) {
     redirect("/unauthorized")
   }
 
@@ -24,4 +28,3 @@ export default async function PlatformLayout({
     </DashboardShell>
   )
 }
-
