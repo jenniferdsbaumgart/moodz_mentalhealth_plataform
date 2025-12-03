@@ -1,5 +1,5 @@
 import { Role } from "@prisma/client"
-import { Home, Users, Calendar, MessageSquare, Heart, BookOpen, Settings, Shield, BarChart } from "lucide-react"
+import { Home, Users, Calendar, MessageSquare, Heart, BookOpen, Settings, Shield, BarChart, UserCheck, FileText } from "lucide-react"
 
 export interface NavItem {
   title: string
