@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CheckCircle2, Mail } from "lucide-react"
 
 const registerSchema = z.object({
   name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
@@ -25,7 +25,8 @@ type RegisterForm = z.infer<typeof registerSchema>
 export function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const router = useRouter()
+  const [success, setSuccess] = useState(false)
+  const [registeredEmail, setRegisteredEmail] = useState("")
 
   const form = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
@@ -54,17 +55,58 @@ export function RegisterForm() {
         }),
       })
 
+      const responseData = await response.json()
+
       if (response.ok) {
-        router.push("/login?message=Conta criada com sucesso")
+        setRegisteredEmail(data.email)
+        setSuccess(true)
       } else {
-        const errorData = await response.json()
-        setError(errorData.message || "Erro ao criar conta")
+        setError(responseData.message || "Erro ao criar conta")
       }
-    } catch (error) {
+    } catch {
       setError("Ocorreu um erro inesperado")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (success) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle2 className="h-6 w-6 text-green-600" />
+          </div>
+          <CardTitle className="text-green-600">Conta Criada!</CardTitle>
+          <CardDescription>
+            Enviamos um email de verificação para
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 text-center">
+          <div className="flex items-center justify-center gap-2 rounded-lg bg-muted p-3">
+            <Mail className="h-5 w-5 text-muted-foreground" />
+            <span className="font-medium">{registeredEmail}</span>
+          </div>
+          
+          <p className="text-sm text-muted-foreground">
+            Verifique sua caixa de entrada e clique no link para ativar sua conta.
+            O link expira em 24 horas.
+          </p>
+
+          <div className="pt-4 space-y-2">
+            <Button variant="outline" className="w-full" asChild>
+              <a href="/login">Ir para Login</a>
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Não recebeu o email?{" "}
+              <a href="/verify-email" className="text-primary hover:underline">
+                Reenviar verificação
+              </a>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (

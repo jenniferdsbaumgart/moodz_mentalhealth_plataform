@@ -6,6 +6,7 @@ export { TherapistApprovedEmail } from "./therapist-approved"
 export { WeeklySummaryEmail } from "./weekly-summary"
 export { PasswordResetEmail } from "./password-reset"
 export { NewBadgeEmail } from "./new-badge"
+export { EmailVerificationEmail } from "./email-verification"
 
 // Email templates index - Advanced templates
 export { SessionCancelledEmail } from "./session-cancelled"
