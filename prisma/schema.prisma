@@ -1025,3 +1025,13 @@ model EmailLog {
   @@index([userId])
   @@index([status])
 }
+
+model RateLimitEntry {
+  id          String   @id @default(cuid())
+  key         String   @unique // "ip:192.168.1.1" ou "user:abc123" ou "ip:192.168.1.1:/api/auth/login"
+  count       Int      @default(0)
+  windowStart DateTime
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}
