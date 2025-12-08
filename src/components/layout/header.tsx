@@ -15,7 +15,7 @@ import {
 import { signOut, useSession } from "next-auth/react"
 import { User, LogOut, Settings } from "lucide-react"
 import { SearchTrigger } from "@/components/search/search-trigger"
-import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
+import { NotificationCenter } from "@/components/notifications/notification-center"
 import Link from "next/link"
 
 export function Header() {
@@ -45,10 +45,10 @@ export function Header() {
         <div className="flex flex-1 items-center justify-end space-x-2 md:flex-none">
           {/* Search icon for mobile */}
           <SearchTrigger variant="icon" className="md:hidden" />
-          
+
           {/* Notifications */}
-          {session?.user && <NotificationDropdown />}
-          
+          {session?.user && <NotificationCenter />}
+
           <ThemeToggle />
 
           {session?.user ? (

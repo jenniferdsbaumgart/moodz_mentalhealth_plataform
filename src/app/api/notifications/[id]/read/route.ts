@@ -1,58 +1,51 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-/**
- * POST /api/notifications/[id]/read
- * Mark a specific notification as read
- */
+
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       )
     }
-    // Verify the notification belongs to the user
-    const existingNotification = await db.notification.findUnique({
-      where: {
-        id: params.id,
-        userId: session.user.id
-      }
+
+    const { id } = await params
+
+    const notification = await db.notification.findUnique({
+      where: { id }
     })
-    if (!existingNotification) {
+
+    if (!notification) {
       return NextResponse.json(
         { error: "Notification not found" },
         { status: 404 }
       )
     }
-    // If already read, just return success
-    if (existingNotification.read) {
-      return NextResponse.json({
-        success: true,
-        notification: existingNotification
-      })
+
+    if (notification.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
     }
-    // Mark as read
-    const notification = await db.notification.update({
-      where: { id: params.id },
-      data: {
-        read: true,
-        readAt: new Date()
-      }
+
+    await db.notification.update({
+      where: { id },
+      data: { read: true }
     })
-    return NextResponse.json({
-      success: true,
-      notification
-    })
+
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error marking notification as read:", error)
     return NextResponse.json(
-      { error: "Failed to mark notification as read" },
+      { error: "Internal Server Error" },
       { status: 500 }
     )
   }
