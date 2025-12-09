@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { pusherClient } from '@/lib/pusher'
+import { usePusherClient } from '@/hooks/use-pusher'
 
 export interface ChatMessage {
   id: string
@@ -33,9 +33,11 @@ export function useSessionChat({
   const hasJoinedRef = useRef(false)
   const channelRef = useRef<any>(null)
 
+  const pusherClient = usePusherClient()
+
   // Connect to Pusher and join session channel
   useEffect(() => {
-    if (!sessionId || !userId || hasJoinedRef.current) return
+    if (!sessionId || !userId || hasJoinedRef.current || !pusherClient) return
 
     setIsConnecting(true)
 
@@ -106,13 +108,13 @@ export function useSessionChat({
         channelRef.current = null
       }
     }
-  }, [sessionId, userId, userName])
+  }, [sessionId, userId, userName, pusherClient])
 
   // Leave session on unmount
   useEffect(() => {
     return () => {
       if (hasJoinedRef.current) {
-        if (channelRef.current) {
+        if (channelRef.current && pusherClient) {
           channelRef.current.unbind_all()
           pusherClient.unsubscribe(`session-${sessionId}`)
           channelRef.current = null

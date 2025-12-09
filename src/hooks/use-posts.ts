@@ -1,12 +1,12 @@
 "use client"
 
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { CommunityFiltersInput } from "@/types/community"
+import { CommunityFilters } from "@/types/community"
 import { toast } from "sonner"
 
 const POSTS_PER_PAGE = 20
 
-export function usePosts(filters: CommunityFiltersInput = {}) {
+export function usePosts(filters: CommunityFilters = {}) {
   return useInfiniteQuery({
     queryKey: ["posts", filters],
     queryFn: async ({ pageParam = 1 }) => {
@@ -26,10 +26,11 @@ export function usePosts(filters: CommunityFiltersInput = {}) {
       const data = await response.json()
       return data
     },
-    getNextPageParam: (lastPage) => {
+    getNextPageParam: (lastPage: any) => {
       const { page, totalPages } = lastPage.pagination
       return page < totalPages ? page + 1 : undefined
     },
+    initialPageParam: 1,
     staleTime: 1000 * 60 * 5, // 5 minutos
   })
 }
