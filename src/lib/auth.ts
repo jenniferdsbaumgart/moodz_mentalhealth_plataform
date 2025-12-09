@@ -12,7 +12,7 @@ import authConfig from "@/lib/auth.config"
  * Para uso no middleware (Edge Runtime), use auth.config.ts diretamente
  */
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(db),
+  adapter: PrismaAdapter(db) as any,
   ...authConfig,
   providers: [
     Credentials({

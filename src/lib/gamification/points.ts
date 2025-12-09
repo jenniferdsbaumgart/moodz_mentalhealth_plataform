@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db"
+import { db as prisma } from "@/lib/db"
 import { PointType as PrismaPointType, Prisma } from "@prisma/client"
 import { POINTS, PointType, LEVELS, STREAK_THRESHOLDS } from "./constants"
 import { calculateLevel, willLevelUp } from "./levels"
@@ -31,22 +31,24 @@ export class PointsService {
 
       // Start transaction
       const result = await prisma.$transaction(async (tx: TransactionClient) => {
-        // Get current user points
+        // Get current user with patient profile
         const user = await tx.user.findUnique({
           where: { id: userId },
-          select: { points: true, level: true },
+          include: { patientProfile: true }
         })
 
-        if (!user) {
-          throw new Error("User not found")
+        // Get current user points
+        if (!user || !user.patientProfile) {
+          throw new Error("User or patient profile not found")
         }
 
-        const currentPoints = user.points
+        const currentPoints = user.patientProfile.points
+        let newLevel = user.patientProfile.level
         const newTotal = currentPoints + pointValue
 
         // Check for level up
         const levelCheck = willLevelUp(currentPoints, pointValue)
-        let newLevel = user.level
+
 
         if (levelCheck.willLevelUp && levelCheck.newLevel) {
           newLevel = levelCheck.newLevel.level
@@ -65,10 +67,11 @@ export class PointsService {
         })
 
         // Update user points and level
-        await tx.user.update({
-          where: { id: userId },
+        // Points are stored in PatientProfile
+        await tx.patientProfile.update({
+          where: { userId },
           data: {
-            points: newTotal,
+            points: { increment: pointValue },
             level: newLevel,
           },
         })
@@ -250,8 +253,8 @@ export class PointsService {
 
     if (bonus > 0) {
       // Update user points with bonus
-      await tx.user.update({
-        where: { id: userId },
+      await tx.patientProfile.update({
+        where: { userId },
         data: { points: { increment: bonus } },
       })
 
@@ -319,7 +322,7 @@ export class PointsService {
       select: { moodStreak: true },
     })
 
-    if (patient?.moodStreak >= 7) badges.push("mood_tracker")
+    if ((patient?.moodStreak || 0) >= 7) badges.push("mood_tracker")
 
     return await this.awardBadgesIfNotOwned(tx, userId, badges)
   }
@@ -393,8 +396,8 @@ export class PointsService {
 
           // Award badge points
           if (badge.pointsReward > 0) {
-            await tx.user.update({
-              where: { id: userId },
+            await tx.patientProfile.update({
+              where: { userId },
               data: { points: { increment: badge.pointsReward } },
             })
 
@@ -404,14 +407,14 @@ export class PointsService {
                 userId,
                 amount: badge.pointsReward,
                 type: "BADGE_UNLOCKED" as PrismaPointType,
-                description: `Badge desbloqueado: ${badge.title}`,
+                description: `Badge desbloqueado: ${badge.name}`,
                 referenceId: badge.id,
                 referenceType: "badge",
               },
             })
           }
 
-          awarded.push(badge.title)
+          awarded.push(badge.name)
         }
       }
     }
@@ -514,6 +517,7 @@ export class PointsService {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
+        patientProfile: true,
         badges: { include: { badge: true } },
         pointTransactions: {
           orderBy: { createdAt: "desc" },
@@ -522,14 +526,16 @@ export class PointsService {
       },
     })
 
-    if (!user) throw new Error("User not found")
+    if (!user || !user.patientProfile) throw new Error("User or patient profile not found")
 
-    const levelInfo = calculateLevel(user.points)
-    const pointsToNext = user.level < LEVELS.length ? LEVELS[user.level].minPoints - user.points : 0
+    const { points, level } = user.patientProfile
+
+    const levelInfo = calculateLevel(points)
+    const pointsToNext = level < LEVELS.length ? LEVELS[level].minPoints - points : 0
 
     return {
-      totalPoints: user.points,
-      currentLevel: user.level,
+      totalPoints: points,
+      currentLevel: level,
       levelName: levelInfo.name,
       pointsToNextLevel: pointsToNext,
       badgesCount: user.badges.length,

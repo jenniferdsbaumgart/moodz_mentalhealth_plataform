@@ -16,5 +16,8 @@ export const therapistOnboardingSchema = z.object({
   documentUrl: z.string().url("URL do documento invalida"),
 })
 
+export type PatientOnboardingData = z.infer<typeof patientOnboardingSchema>
+export type TherapistOnboardingData = z.infer<typeof therapistOnboardingSchema>
+
 
 

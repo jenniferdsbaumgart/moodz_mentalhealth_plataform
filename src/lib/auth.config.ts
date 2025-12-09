@@ -10,19 +10,18 @@ export default {
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
-    signUp: "/register",
   },
   callbacks: {
     authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user
-      const isAuthRoute = 
+      const isAuthRoute =
         request.nextUrl.pathname.startsWith("/login") ||
         request.nextUrl.pathname.startsWith("/register") ||
         request.nextUrl.pathname.startsWith("/onboarding") ||
         request.nextUrl.pathname.startsWith("/verify-email") ||
         request.nextUrl.pathname.startsWith("/forgot-password") ||
         request.nextUrl.pathname.startsWith("/reset-password")
-      const isPublicRoute = 
+      const isPublicRoute =
         request.nextUrl.pathname === "/" ||
         request.nextUrl.pathname.startsWith("/blog") ||
         request.nextUrl.pathname.startsWith("/therapists")
@@ -69,7 +68,7 @@ export default {
     session({ session, token }) {
       if (token) {
         session.user.id = token.sub!
-        session.user.role = token.role as string
+        session.user.role = token.role as any
       }
       return session
     }

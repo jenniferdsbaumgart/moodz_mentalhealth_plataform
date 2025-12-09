@@ -1,5 +1,9 @@
-import { format, parseISO } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { formatDate } from "@/lib/utils/date"
+import { parseISO } from "date-fns"
+
+export function formatDateString(date: string | Date) {
+  return formatDate(date, "d 'de' MMMM, yyyy")
+}
 
 /**
  * Calcula o tempo estimado de leitura baseado no conteúdo
@@ -94,9 +98,7 @@ export function extractExcerpt(content: string, maxLength: number = 150): string
  * Formata data para exibição em português brasileiro
  */
 export function formatBlogDate(date: Date | string): string {
-  const dateObj = typeof date === "string" ? parseISO(date) : date
-
-  return format(dateObj, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+  return formatDate(date)
 }
 
 /**

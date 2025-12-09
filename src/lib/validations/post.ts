@@ -12,7 +12,7 @@ export const createPostSchema = z.object({
   tags: z.array(z.string())
     .max(5, "Máximo de 5 tags")
     .optional(),
-  isAnonymous: z.boolean().default(false),
+  isAnonymous: z.boolean(),
 })
 
 export const updatePostSchema = z.object({

@@ -1,259 +1,87 @@
-import { PromptCategory, ExerciseCategory, Difficulty } from "@prisma/client"
+export interface Emotion {
+  id: string
+  label: string
+  emoji?: string
+  category: "positive" | "negative" | "neutral"
+  color: string
+}
 
-export const MOOD_TRACKING_DEFAULTS = {
-  MAX_EMOTIONS: 10,
-  MAX_ACTIVITIES: 10,
-  MAX_NOTES_LENGTH: 1000,
-} as const
+export const PREDEFINED_EMOTIONS: Emotion[] = [
+  // Positivas
+  { id: "feliz", label: "Feliz", emoji: "😊", category: "positive", color: "bg-green-100 text-green-800 border-green-200" },
+  { id: "calmo", label: "Calmo", emoji: "😌", category: "positive", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  { id: "grato", label: "Grato", emoji: "🙏", category: "positive", color: "bg-purple-100 text-purple-800 border-purple-200" },
+  { id: "animado", label: "Animado", emoji: "🤩", category: "positive", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+  { id: "amado", label: "Amado", emoji: "❤️", category: "positive", color: "bg-pink-100 text-pink-800 border-pink-200" },
+  { id: "confiante", label: "Confiante", emoji: "💪", category: "positive", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
 
-export const JOURNAL_DEFAULTS = {
-  MAX_TITLE_LENGTH: 200,
-  MAX_CONTENT_LENGTH: 10000,
-  MAX_TAGS: 10,
-  MAX_TAG_LENGTH: 30,
-} as const
+  // Negativas
+  { id: "triste", label: "Triste", emoji: "😢", category: "negative", color: "bg-red-100 text-red-800 border-red-200" },
+  { id: "ansioso", label: "Ansioso", emoji: "😰", category: "negative", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  { id: "irritado", label: "Irritado", emoji: "😠", category: "negative", color: "bg-red-200 text-red-900 border-red-300" },
+  { id: "estressado", label: "Estressado", emoji: "😫", category: "negative", color: "bg-orange-200 text-orange-900 border-orange-300" },
+  { id: "solitario", label: "Solitário", emoji: "😔", category: "negative", color: "bg-gray-100 text-gray-800 border-gray-200" },
+  { id: "cansado", label: "Cansado", emoji: "😴", category: "negative", color: "bg-blue-100 text-blue-900 border-blue-300" },
 
-export const MINDFULNESS_DEFAULTS = {
-  MAX_TITLE_LENGTH: 200,
-  MAX_DESCRIPTION_LENGTH: 2000,
-  MAX_INSTRUCTIONS: 20,
-  MAX_INSTRUCTION_LENGTH: 500,
-  MAX_BENEFITS: 10,
-  MAX_BENEFIT_LENGTH: 200,
-  MIN_DURATION: 1,
-  MAX_DURATION: 120, // minutes
-} as const
+  // Neutras
+  { id: "neutro", label: "Neutro", emoji: "😐", category: "neutral", color: "bg-gray-100 text-gray-700 border-gray-200" },
+  { id: "pensativo", label: "Pensativo", emoji: "🤔", category: "neutral", color: "bg-blue-50 text-blue-700 border-blue-200" },
+  { id: "curioso", label: "Curioso", emoji: "👀", category: "neutral", color: "bg-purple-50 text-purple-700 border-purple-200" },
+]
 
-export const WELLNESS_DEFAULTS = {
-  MOOD: MOOD_TRACKING_DEFAULTS,
-  JOURNAL: JOURNAL_DEFAULTS,
-  MINDFULNESS: MINDFULNESS_DEFAULTS,
-} as const
+export interface Activity {
+  id: string
+  label: string
+  emoji: string
+  category: "work" | "health" | "social" | "leisure" | "rest"
+  color: string
+}
 
-export const MOOD_SCALE_LABELS = {
-  1: "Péssimo",
-  2: "Muito mal",
-  3: "Mal",
-  4: "Regular",
-  5: "Ok",
-  6: "Bem",
-  7: "Bom",
-  8: "Muito bom",
-  9: "Excelente",
-  10: "Perfeito",
-} as const
+export const PREDEFINED_ACTIVITIES: Activity[] = [
+  // Trabalho
+  { id: "trabalho", label: "Trabalho", emoji: "💼", category: "work", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  { id: "estudo", label: "Estudo", emoji: "📚", category: "work", color: "bg-green-100 text-green-800 border-green-200" },
+  { id: "reuniao", label: "Reunião", emoji: "👥", category: "work", color: "bg-purple-100 text-purple-800 border-purple-200" },
 
-export const ENERGY_SCALE_LABELS = {
-  1: "Exausto",
-  2: "Muito cansado",
-  3: "Cansado",
-  4: "Pouco cansado",
-  5: "Normal",
-  6: "Energizado",
-  7: "Muito energizado",
-  8: "Cheio de energia",
-  9: "Super energizado",
-  10: "Infinita energia",
-} as const
+  // Saúde
+  { id: "exercicio", label: "Exercício", emoji: "🏃‍♀️", category: "health", color: "bg-red-100 text-red-800 border-red-200" },
+  { id: "meditacao", label: "Meditação", emoji: "🧘‍♀️", category: "health", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+  { id: "dieta", label: "Cuidar da dieta", emoji: "🥗", category: "health", color: "bg-green-200 text-green-900 border-green-300" },
 
-export const ANXIETY_SCALE_LABELS = {
-  1: "Calmo",
-  2: "Tranquilo",
-  3: "Um pouco ansioso",
-  4: "Ansioso",
-  5: "Muito ansioso",
-  6: "Bastante ansioso",
-  7: "Extremamente ansioso",
-  8: "Crise de ansiedade",
-  9: "Pânico",
-  10: "Ataque de pânico",
-} as const
+  // Social
+  { id: "social", label: "Interação social", emoji: "👥", category: "social", color: "bg-pink-100 text-pink-800 border-pink-200" },
+  { id: "familia", label: "Tempo em família", emoji: "👨‍👩‍👧‍👦", category: "social", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  { id: "amigos", label: "Tempo com amigos", emoji: "🎉", category: "social", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
 
-export const SLEEP_SCALE_LABELS = {
-  1: "Não dormi",
-  2: "Muito pouco",
-  3: "Pouco",
-  4: "Insuficiente",
-  5: "Regular",
-  6: "Bom",
-  7: "Bem descansado",
-  8: "Muito bem",
-  9: "Excelente",
-  10: "Perfeitamente descansado",
-} as const
+  // Lazer
+  { id: "natureza", label: "Tempo na natureza", emoji: "🌳", category: "leisure", color: "bg-green-100 text-green-900 border-green-300" },
+  { id: "leitura", label: "Leitura", emoji: "📖", category: "leisure", color: "bg-blue-200 text-blue-900 border-blue-300" },
+  { id: "musica", label: "Ouvir música", emoji: "🎵", category: "leisure", color: "bg-purple-200 text-purple-900 border-purple-300" },
+  { id: "hobby", label: "Hobby/Criativo", emoji: "🎨", category: "leisure", color: "bg-pink-200 text-pink-900 border-pink-300" },
+  { id: "jogos", label: "Jogos", emoji: "🎮", category: "leisure", color: "bg-indigo-200 text-indigo-900 border-indigo-300" },
 
-export const PROMPT_CATEGORIES = {
-  [PromptCategory.GRATITUDE]: {
-    label: "Gratidão",
-    icon: "Heart",
-    color: "pink",
-    description: "Reflexões sobre coisas pelas quais somos gratos"
-  },
-  [PromptCategory.REFLECTION]: {
-    label: "Reflexão",
-    icon: "Eye",
-    color: "blue",
-    description: "Pensamentos profundos sobre experiências e aprendizados"
-  },
-  [PromptCategory.GOALS]: {
-    label: "Metas",
-    icon: "Target",
-    color: "green",
-    description: "Objetivos pessoais e progresso alcançado"
-  },
-  [PromptCategory.EMOTIONS]: {
-    label: "Emoções",
-    icon: "Smile",
-    color: "yellow",
-    description: "Exploração e compreensão de sentimentos"
-  },
-  [PromptCategory.RELATIONSHIPS]: {
-    label: "Relacionamentos",
-    icon: "Users",
-    color: "purple",
-    description: "Conexões interpessoais e dinâmicas sociais"
-  },
-  [PromptCategory.GROWTH]: {
-    label: "Crescimento",
-    icon: "Sprout",
-    color: "green",
-    description: "Desenvolvimento pessoal e autoconhecimento"
-  },
-  [PromptCategory.CHALLENGES]: {
-    label: "Desafios",
-    icon: "Mountain",
-    color: "orange",
-    description: "Dificuldades enfrentadas e lições aprendidas"
-  },
-  [PromptCategory.CREATIVITY]: {
-    label: "Criatividade",
-    icon: "Palette",
-    color: "indigo",
-    description: "Expressão criativa e ideias inovadoras"
-  },
-} as const
+  // Descanso
+  { id: "descanso", label: "Descanso", emoji: "😴", category: "rest", color: "bg-gray-100 text-gray-800 border-gray-200" },
+  { id: "sono", label: "Bom sono", emoji: "🌙", category: "rest", color: "bg-blue-100 text-blue-900 border-blue-300" },
+  { id: "relaxar", label: "Relaxar", emoji: "🛋️", category: "rest", color: "bg-green-50 text-green-700 border-green-200" },
+]
 
-export const EXERCISE_CATEGORIES = {
-  [ExerciseCategory.BREATHING]: {
-    label: "Respiração",
-    icon: "Wind",
-    color: "blue",
-    description: "Técnicas de respiração para calma e foco"
-  },
-  [ExerciseCategory.MEDITATION]: {
-    label: "Meditação",
-    icon: "Brain",
-    color: "purple",
-    description: "Práticas meditativas guiadas"
-  },
-  [ExerciseCategory.BODY_SCAN]: {
-    label: "Varredura Corporal",
-    icon: "Scan",
-    color: "green",
-    description: "Relaxamento progressivo dos músculos"
-  },
-  [ExerciseCategory.GROUNDING]: {
-    label: "Enraizamento",
-    icon: "TreePine",
-    color: "brown",
-    description: "Técnicas para se sentir presente e conectado"
-  },
-  [ExerciseCategory.VISUALIZATION]: {
-    label: "Visualização",
-    icon: "Eye",
-    color: "indigo",
-    description: "Imaginação guiada e visualizações positivas"
-  },
-  [ExerciseCategory.RELAXATION]: {
-    label: "Relaxamento",
-    icon: "Spa",
-    color: "pink",
-    description: "Técnicas para reduzir tensão e stress"
-  },
-  [ExerciseCategory.MINDFUL_MOVEMENT]: {
-    label: "Movimento Consciente",
-    icon: "Activity",
-    color: "orange",
-    description: "Atividades físicas mindful e conscientes"
-  },
-} as const
+export interface MoodLevel {
+  value: number
+  emoji: string
+  label: string
+  color: string
+}
 
-export const DIFFICULTY_LEVELS = {
-  [Difficulty.BEGINNER]: {
-    label: "Iniciante",
-    color: "green",
-    description: "Perfeito para começar",
-    icon: "Baby"
-  },
-  [Difficulty.INTERMEDIATE]: {
-    label: "Intermediário",
-    color: "yellow",
-    description: "Alguma experiência necessária",
-    icon: "User"
-  },
-  [Difficulty.ADVANCED]: {
-    label: "Avançado",
-    color: "red",
-    description: "Para praticantes experientes",
-    icon: "Crown"
-  },
-} as const
-
-export const DEFAULT_PROMPTS = [
-  {
-    text: "Pelo que você se sente grato hoje?",
-    category: PromptCategory.GRATITUDE,
-  },
-  {
-    text: "Qual foi o momento mais significativo do seu dia?",
-    category: PromptCategory.REFLECTION,
-  },
-  {
-    text: "Quais são seus objetivos para os próximos 30 dias?",
-    category: PromptCategory.GOALS,
-  },
-  {
-    text: "Como você está se sentindo emocionalmente hoje?",
-    category: PromptCategory.EMOTIONS,
-  },
-  {
-    text: "Como você pode ser mais gentil consigo mesmo hoje?",
-    category: PromptCategory.GROWTH,
-  },
-  {
-    text: "O que você aprendeu sobre si mesmo recentemente?",
-    category: PromptCategory.REFLECTION,
-  },
-  {
-    text: "Como você pode tornar seu dia melhor?",
-    category: PromptCategory.CREATIVITY,
-  },
-] as const
-
-export const WELLNESS_INSIGHTS = {
-  MOOD_PATTERNS: "Padrões de Humor",
-  ACTIVITY_CORRELATION: "Correlação com Atividades",
-  SLEEP_IMPACT: "Impacto do Sono",
-  ANXIETY_TRIGGERS: "Gatilhos de Ansiedade",
-  EMOTIONAL_PATTERNS: "Padrões Emocionais",
-  WELLNESS_TRENDS: "Tendências de Bem-Estar",
-} as const
-
-export const STREAK_THRESHOLDS = {
-  BRONZE: 7,   // 7 dias consecutivos
-  SILVER: 14,  // 2 semanas
-  GOLD: 30,    // 1 mês
-  PLATINUM: 90, // 3 meses
-} as const
-
-export const WELLNESS_BADGES = {
-  FIRST_ENTRY: { name: "Primeira Entrada", description: "Fez sua primeira anotação" },
-  WEEK_STREAK: { name: "Semana Ativa", description: "7 dias consecutivos de registros" },
-  MONTH_STREAK: { name: "Mês Ativo", description: "30 dias consecutivos de registros" },
-  JOURNAL_MASTER: { name: "Mestre do Diário", description: "50 entradas no diário" },
-  MINDFUL_MASTER: { name: "Mestre Mindfulness", description: "Completou 25 exercícios" },
-  EMOTIONAL_AWARE: { name: "Consciência Emocional", description: "Registrou 10 emoções diferentes" },
-} as const
-
-
-
+export const MOOD_LEVELS: MoodLevel[] = [
+  { value: 1, emoji: "😢", label: "Muito mal", color: "bg-red-500" },
+  { value: 2, emoji: "😞", label: "Mal", color: "bg-red-400" },
+  { value: 3, emoji: "😕", label: "Desanimado", color: "bg-orange-500" },
+  { value: 4, emoji: "😐", label: "Meh", color: "bg-orange-400" },
+  { value: 5, emoji: "🙂", label: "Ok", color: "bg-yellow-500" },
+  { value: 6, emoji: "😊", label: "Bem", color: "bg-yellow-400" },
+  { value: 7, emoji: "😄", label: "Bom", color: "bg-green-500" },
+  { value: 8, emoji: "😃", label: "Muito bom", color: "bg-green-400" },
+  { value: 9, emoji: "🤗", label: "Ótimo", color: "bg-blue-500" },
+  { value: 10, emoji: "🥳", label: "Incrível", color: "bg-purple-500" },
+]

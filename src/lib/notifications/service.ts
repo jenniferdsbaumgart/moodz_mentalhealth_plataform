@@ -1,6 +1,6 @@
 import { db } from "@/lib/db"
 import { NotificationType } from "@prisma/client"
-import { pusher } from "@/lib/pusher"
+import { pusherServer as pusher } from "@/lib/pusher"
 import { sendPushNotification } from "./push"
 import { queueEmail } from "./email"
 

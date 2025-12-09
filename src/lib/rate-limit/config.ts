@@ -114,7 +114,7 @@ export const ROLE_MULTIPLIERS: Record<Role, number> = {
 
 /**
  * Get rate limit config for a given path
- * Supports wildcard patterns like /api/sessions/*/enroll
+ * Supports wildcard patterns like /api/sessions/:id/enroll
  */
 export function getRateLimitConfig(path: string): RateLimitConfig {
   // Try exact match first

@@ -69,15 +69,16 @@ export async function notifySessionEnrollment(
       }),
       db.user.findUnique({
         where: { id: patientId },
-        include: {
-          patientProfile: { select: { name: true } }
+        select: {
+          id: true,
+          name: true
         }
       })
     ])
 
     if (!session || !patient) return
 
-    const patientName = patient.patientProfile?.name || patient.name || "Um paciente"
+    const patientName = patient.name || "Um paciente"
 
     // Notify therapist about new enrollment
     await createNotification({
@@ -545,15 +546,16 @@ export async function notifyNewEnrollment(
       }),
       db.user.findUnique({
         where: { id: patientId },
-        include: {
-          patientProfile: { select: { name: true } }
+        select: {
+          id: true,
+          name: true
         }
       })
     ])
 
     if (!session || !patient) return
 
-    const patientName = patient.patientProfile?.name || patient.name || "Um paciente"
+    const patientName = patient.name || "Um paciente"
     const currentCount = session._count.participants
     const spotsLeft = session.maxParticipants - currentCount
 
@@ -631,14 +633,15 @@ export async function notifyPatientMilestone(
   try {
     const patient = await db.user.findUnique({
       where: { id: patientId },
-      include: {
-        patientProfile: { select: { name: true } }
+      select: {
+        id: true,
+        name: true
       }
     })
 
     if (!patient) return
 
-    const patientName = patient.patientProfile?.name || patient.name || "Um paciente"
+    const patientName = patient.name || "Um paciente"
 
     const milestoneMessages: Record<string, { title: string; message: string }> = {
       sessions: {

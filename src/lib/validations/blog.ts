@@ -30,7 +30,7 @@ export const blogPostSchema = z.object({
     .optional()
     .or(z.literal("")),
 
-  status: z.nativeEnum(BlogPostStatus).default(BlogPostStatus.DRAFT),
+  status: z.nativeEnum(BlogPostStatus),
 
   publishedAt: z
     .string()
@@ -41,8 +41,7 @@ export const blogPostSchema = z.object({
 
   tagIds: z
     .array(z.string())
-    .max(10, "Máximo de 10 tags por post")
-    .default([]),
+    .max(10, "Máximo de 10 tags por post"),
 })
 
 // Schema para atualização de post (campos opcionais)

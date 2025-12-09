@@ -9,6 +9,8 @@ export const pusherServer = new Pusher({
   useTLS: true,
 })
 
+export const pusher = pusherServer;
+
 // Client-side Pusher instance is created in the hook to avoid SSR issues
 // See: src/hooks/use-pusher.ts
 

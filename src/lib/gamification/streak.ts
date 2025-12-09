@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db"
+import { db as prisma } from "@/lib/db"
 import { PointsService } from "./points"
 import { BadgeService } from "./badges"
 

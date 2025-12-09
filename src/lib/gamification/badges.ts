@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db"
+import { db as prisma } from "@/lib/db"
 import { notifyNewBadge } from "@/lib/notifications/triggers"
 
 /**
@@ -172,18 +172,37 @@ export class BadgeService {
     const badges: string[] = []
 
     // Get user creation date
+    // Get user with patient profile for gamification stats
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { createdAt: true },
+      include: {
+        patientProfile: true, // badges are tracked via UserBadge but stats are on PatientProfile
+      },
     })
 
-    if (!user) return badges
+    if (!user || !user.patientProfile) return badges
+
+    const { points, level } = user.patientProfile
 
     // Early adopter badge (users who registered before a certain date)
     const earlyAdopterDeadline = new Date("2024-12-01")
     if (user.createdAt < earlyAdopterDeadline) {
       badges.push("early_adopter")
     }
+
+    // The following block was part of the instruction but references undefined variables
+    // and would cause a syntax error. It's commented out to maintain a syntactically
+    // correct file, as per instructions. It appears to be an example of how
+    // points/level *could* be used in a generic badge eligibility check,
+    // rather than a direct addition to checkSpecialBadges.
+    /*
+    // Check specific badge eligibility
+    // This logic depends on the specific criteria of each badge
+    // For now we just implement point-based badges as an example
+    if (badge.criteriaType === 'points' && points >= badge.criteriaValue) {
+      await awardBadge(userId, badge.slug)
+    }
+    */
 
     return await this.awardBadgesIfNotOwned(userId, badges)
   }
@@ -247,8 +266,8 @@ export class BadgeService {
 
           // Award badge points if any
           if (badge.pointsReward > 0) {
-            await prisma.user.update({
-              where: { id: userId },
+            await prisma.patientProfile.update({
+              where: { userId },
               data: { points: { increment: badge.pointsReward } },
             })
 
@@ -258,7 +277,7 @@ export class BadgeService {
                 userId,
                 amount: badge.pointsReward,
                 type: "BADGE_UNLOCKED",
-                description: `Badge desbloqueado: ${badge.title}`,
+                description: `Badge desbloqueado: ${badge.name}`,
                 referenceId: badge.id,
                 referenceType: "badge",
               },
@@ -268,7 +287,7 @@ export class BadgeService {
           // Send notification about new badge (non-blocking)
           notifyNewBadge(userId, badge.id).catch(console.error)
 
-          awarded.push(badge.title)
+          awarded.push(badge.name)
         }
       }
     }

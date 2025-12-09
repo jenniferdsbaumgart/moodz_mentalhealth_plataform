@@ -87,7 +87,7 @@ export async function runSessionCleanup() {
   }
 
   try {
-    // Mark past scheduled sessions as NO_SHOW if they haven't started
+    // Mark past scheduled sessions as CANCELLED if they haven't started
     const pastSessions = await db.groupSession.updateMany({
       where: {
         status: "SCHEDULED",
@@ -96,7 +96,7 @@ export async function runSessionCleanup() {
         }
       },
       data: {
-        status: "NO_SHOW"
+        status: "CANCELLED"
       }
     })
     results.completedSessions = pastSessions.count

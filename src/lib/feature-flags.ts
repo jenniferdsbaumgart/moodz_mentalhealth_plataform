@@ -120,10 +120,10 @@ export async function logSystemEvent(
   try {
     await db.systemLog.create({
       data: {
-        level,
+        level: level as any,
         source,
         message,
-        metadata,
+        metadata: metadata as any,
       },
     })
   } catch (error) {

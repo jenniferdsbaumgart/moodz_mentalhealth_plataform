@@ -9,7 +9,7 @@ export const createPostSchema = z.object({
     .min(20, "Conteúdo deve ter pelo menos 20 caracteres")
     .max(10000, "Conteúdo deve ter no máximo 10.000 caracteres"),
   category: z.nativeEnum(PostCategory),
-  isAnonymous: z.boolean().default(false),
+  isAnonymous: z.boolean(),
   tagIds: z.array(z.string()).max(5, "Máximo de 5 tags").optional(),
 })
 

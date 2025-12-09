@@ -11,15 +11,19 @@ interface AuditLogInput {
 }
 
 export async function createAuditLog(input: AuditLogInput) {
-  const headersList = headers()
+  const headersList = await headers()
   const ipAddress = headersList.get("x-forwarded-for") ||
-                   headersList.get("x-real-ip") ||
-                   "unknown"
+    headersList.get("x-real-ip") ||
+    "unknown"
   const userAgent = headersList.get("user-agent") || undefined
 
   return db.auditLog.create({
     data: {
-      ...input,
+      userId: input.userId,
+      action: input.action,
+      entity: input.entity,
+      entityId: input.entityId,
+      details: input.details as any,
       ipAddress,
       userAgent,
     },
