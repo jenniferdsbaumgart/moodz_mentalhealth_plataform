@@ -4,7 +4,7 @@ import { db as prisma } from "@/lib/db"
 // PATCH - Editar nota
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; noteId: string } }
+  { params }: { params: Promise<{ id: string; noteId: string }> }
 ) {
   try {
     const session = await auth()
@@ -14,7 +14,7 @@ export async function PATCH(
         { status: 403 }
       )
     }
-    const { id, noteId } = params
+    const { id, noteId } = await params
     const body = await request.json()
     const { content, isPrivate } = body
     if (!content || content.trim().length === 0) {
@@ -42,7 +42,7 @@ export async function PATCH(
     const { mockPatientNotes } = require("../route")
     // Encontrar e atualizar a nota
     const noteIndex = mockPatientNotes.findIndex(
-      note => note.id === noteId && note.therapistId === therapistProfile.id && note.patientId === id
+      (note: any) => note.id === noteId && note.therapistId === therapistProfile.id && note.patientId === id
     )
     if (noteIndex === -1) {
       return NextResponse.json(
@@ -73,7 +73,7 @@ export async function PATCH(
 // DELETE - Deletar nota
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; noteId: string } }
+  { params }: { params: Promise<{ id: string; noteId: string }> }
 ) {
   try {
     const session = await auth()
@@ -83,7 +83,7 @@ export async function DELETE(
         { status: 403 }
       )
     }
-    const { id, noteId } = params
+    const { id, noteId } = await params
     // Buscar perfil do terapeuta
     const therapistProfile = await prisma.therapistProfile.findUnique({
       where: {
@@ -103,7 +103,7 @@ export async function DELETE(
     const { mockPatientNotes } = require("../route")
     // Encontrar e remover a nota
     const noteIndex = mockPatientNotes.findIndex(
-      note => note.id === noteId && note.therapistId === therapistProfile.id && note.patientId === id
+      (note: any) => note.id === noteId && note.therapistId === therapistProfile.id && note.patientId === id
     )
     if (noteIndex === -1) {
       return NextResponse.json(
