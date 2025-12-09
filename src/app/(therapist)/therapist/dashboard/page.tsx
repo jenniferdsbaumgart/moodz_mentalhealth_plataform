@@ -88,7 +88,7 @@ export default function TherapistDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {data.upcomingSessions.map((session) => (
+              {data.upcomingSessions.map((session: any) => (
                 <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div className="flex-1">
                     <p className="font-medium">{session.title}</p>
@@ -115,7 +115,7 @@ export default function TherapistDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {data.recentSessions.slice(0, 3).map((session) => (
+              {data.recentSessions.slice(0, 3).map((session: any) => (
                 <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div className="flex-1">
                     <p className="font-medium">{session.title}</p>

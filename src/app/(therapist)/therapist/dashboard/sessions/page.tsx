@@ -198,7 +198,7 @@ export default function SessionsPage() {
                 {upcomingSessions.map((session) => (
                   <TherapistSessionCard
                     key={session.id}
-                    session={session}
+                    session={session as any}
                     onStartSession={handleStartSession}
                     onEditSession={handleEditSession}
                     onViewParticipants={handleViewParticipants}
@@ -226,7 +226,7 @@ export default function SessionsPage() {
                 {pastSessions.map((session) => (
                   <TherapistSessionCard
                     key={session.id}
-                    session={session}
+                    session={session as any}
                     onStartSession={handleStartSession}
                     onEditSession={handleEditSession}
                     onViewParticipants={handleViewParticipants}
@@ -240,7 +240,6 @@ export default function SessionsPage() {
         </Tabs>
 
         <CancelSessionDialog
-          sessionId={cancelDialog.sessionId}
           sessionTitle={cancelDialog.sessionTitle}
           isOpen={cancelDialog.isOpen}
           onClose={() => setCancelDialog({ isOpen: false, sessionId: "", sessionTitle: "" })}

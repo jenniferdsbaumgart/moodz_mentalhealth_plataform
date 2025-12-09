@@ -62,7 +62,7 @@ export default async function EditPostPage({ params }: EditPostPageProps) {
   ])
 
   return (
-    <DashboardShell>
+    <DashboardShell role="ADMIN">
       <PostForm
         post={post}
         categories={categories}

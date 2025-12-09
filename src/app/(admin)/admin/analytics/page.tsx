@@ -74,9 +74,9 @@ export default function AdminAnalyticsPage() {
     if (!data) return
 
     const exportData = {
-      generatedAt: new Date().toISOString(),
+      ...data,
       period,
-      ...data
+      generatedAt: new Date().toISOString(),
     }
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {

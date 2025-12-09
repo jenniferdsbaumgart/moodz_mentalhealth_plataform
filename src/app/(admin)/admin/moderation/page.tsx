@@ -14,33 +14,7 @@ import {
   ReportDetailPanel,
   ModerationLog
 } from "@/components/admin/moderation"
-
-interface Report {
-  id: string
-  contentType: "POST" | "COMMENT"
-  contentId: string
-  reason: string
-  description: string | null
-  status: string
-  createdAt: string
-  reporter: {
-    id: string
-    name: string | null
-    image: string | null
-  }
-  content?: {
-    id: string
-    title?: string
-    content?: string
-    createdAt?: string
-    author?: {
-      id: string
-      name: string | null
-      image: string | null
-      email: string
-    }
-  }
-}
+import { type Report } from "@/components/admin/moderation/report-queue-enhanced"
 
 export default function ModerationPage() {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)

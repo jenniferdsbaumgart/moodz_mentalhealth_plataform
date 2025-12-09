@@ -1,207 +1,220 @@
 "use client"
 
+import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { useSearchParams } from "next/navigation"
-import { Hero } from "@/components/blog/hero"
-import { PostCard } from "@/components/blog/post-card"
-import { Sidebar } from "@/components/blog/sidebar"
+import Link from "next/link"
+import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { BlogPost, BlogCategory, BlogTag, User } from "@prisma/client"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Search, Clock, Eye, ArrowRight, BookOpen } from "lucide-react"
+import { formatDistanceToNow } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { cn } from "@/lib/utils"
 
-type BlogPostWithRelations = BlogPost & {
-  author: Pick<User, "id" | "name" | "image">
-  category: Pick<BlogCategory, "id" | "name" | "slug" | "color">
-  tags: { tag: Pick<BlogTag, "id" | "name" | "slug"> }[]
+interface BlogPost {
+  id: string
+  title: string
+  slug: string
+  excerpt: string | null
+  coverImage: string | null
+  readingTime: number | null
+  viewCount: number
+  publishedAt: string
+  author: {
+    name: string | null
+    image: string | null
+  }
+  category: {
+    name: string
+    slug: string
+    color: string
+  }
 }
 
-type CategoryWithCount = BlogCategory & {
-  _count: { posts: number }
+interface BlogCategory {
+  id: string
+  name: string
+  slug: string
+  color: string
 }
 
 export default function BlogPage() {
-  const searchParams = useSearchParams()
+  const [search, setSearch] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
-  // Parse query parameters
-  const categorySlug = searchParams.get("category")
-  const tagSlug = searchParams.get("tag")
-  const search = searchParams.get("search")
-  const sort = searchParams.get("sort") || "publishedAt"
-  const page = parseInt(searchParams.get("page") || "1")
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["blog-posts", { categorySlug, tagSlug, search, sort, page }],
-    queryFn: async () => {
-      const params = new URLSearchParams()
-      if (categorySlug) params.set("category", categorySlug)
-      if (tagSlug) params.set("tag", tagSlug)
-      if (search) params.set("search", search)
-      if (sort) params.set("sort", sort)
-      params.set("page", page.toString())
-      params.set("limit", "12")
-
-      const response = await fetch(`/api/blog/posts?${params}`)
-      if (!response.ok) throw new Error("Failed to fetch posts")
-      return response.json()
-    },
-  })
-
-  const { data: categoriesData } = useQuery({
+  const { data: categories = [] } = useQuery<BlogCategory[]>({
     queryKey: ["blog-categories"],
     queryFn: async () => {
-      const response = await fetch("/api/blog/categories")
-      if (!response.ok) throw new Error("Failed to fetch categories")
-      return response.json()
-    },
+      const res = await fetch("/api/blog/categories")
+      if (!res.ok) throw new Error("Failed to fetch categories")
+      return res.json()
+    }
   })
 
-  const { data: tagsData } = useQuery({
-    queryKey: ["blog-tags"],
+  const { data: postsData, isLoading } = useQuery<{ posts: BlogPost[]; total: number }>({
+    queryKey: ["blog-posts", search, selectedCategory],
     queryFn: async () => {
-      // TODO: Create tags API endpoint if needed
-      return { tags: [] }
-    },
+      const params = new URLSearchParams()
+      if (search) params.set("search", search)
+      if (selectedCategory) params.set("category", selectedCategory)
+      params.set("status", "PUBLISHED")
+
+      const res = await fetch(`/api/blog/posts?${params.toString()}`)
+      if (!res.ok) throw new Error("Failed to fetch posts")
+      return res.json()
+    }
   })
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen">
-        <div className="animate-pulse">
-          <div className="h-96 bg-muted"></div>
-          <div className="container mx-auto px-4 py-8">
-            <div className="grid lg:grid-cols-4 gap-8">
-              <div className="lg:col-span-3">
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="space-y-4">
-                      <div className="h-48 bg-muted rounded-lg"></div>
-                      <div className="space-y-2">
-                        <div className="h-4 bg-muted rounded"></div>
-                        <div className="h-3 bg-muted rounded w-3/4"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const posts = data?.posts || []
-  const pagination = data?.pagination || {}
-  const categories = categoriesData?.categories || []
-  const tags = tagsData?.tags || []
-
-  // Featured post is the first post if no filters are applied
-  const featuredPost = !categorySlug && !tagSlug && !search && posts.length > 0 ? posts[0] : null
-  const gridPosts = featuredPost ? posts.slice(1) : posts
-
-  // Calculate total posts for sidebar
-  const totalPosts = categories.reduce((acc, cat) => acc + cat._count.posts, 0)
-
-  const goToPage = (newPage: number) => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("page", newPage.toString())
-    window.location.href = `/blog?${params.toString()}`
-  }
+  const posts = postsData?.posts || []
 
   return (
-    <div className="min-h-screen">
-      {/* Hero Section - Only show if there's a featured post and no filters */}
-      {featuredPost && (
-        <Hero featuredPost={featuredPost as BlogPostWithRelations} />
-      )}
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Posts Grid */}
-          <div className="lg:col-span-3">
-            {/* Page Header */}
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold mb-2">
-                {categorySlug ? `Categoria: ${categories.find(c => c.slug === categorySlug)?.name}` :
-                 tagSlug ? `Tag: #${tags.find(t => t.slug === tagSlug)?.name}` :
-                 search ? `Resultados para "${search}"` :
-                 "Blog"}
-              </h1>
-              <p className="text-muted-foreground">
-                {posts.length === 1 ? "1 post encontrado" : `${posts.length} posts encontrados`}
-              </p>
-            </div>
-
-            {/* Posts Grid */}
-            {gridPosts.length > 0 ? (
-              <>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {gridPosts.map((post: BlogPostWithRelations) => (
-                    <PostCard key={post.id} post={post} />
-                  ))}
-                </div>
-
-                {/* Pagination */}
-                {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      Mostrando {gridPosts.length} de {pagination.total} posts
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => goToPage(page - 1)}
-                        disabled={page <= 1}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        Anterior
-                      </Button>
-                      <span className="text-sm">
-                        Página {page} de {pagination.totalPages}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => goToPage(page + 1)}
-                        disabled={page >= pagination.totalPages}
-                      >
-                        Próxima
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📝</div>
-                <h3 className="text-xl font-semibold mb-2">Nenhum post encontrado</h3>
-                <p className="text-muted-foreground mb-4">
-                  {search ? "Tente ajustar sua busca ou filtros." : "Volte em breve para novos conteúdos!"}
-                </p>
-                {(categorySlug || tagSlug || search) && (
-                  <Button asChild variant="outline">
-                    <a href="/blog">Ver todos os posts</a>
-                  </Button>
-                )}
-              </div>
-            )}
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      {/* Hero Section */}
+      <section className="relative py-16 md:py-24 px-4">
+        <div className="container mx-auto max-w-6xl text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6">
+            <BookOpen className="h-4 w-4" />
+            <span className="text-sm font-medium">Blog Moodz</span>
           </div>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+            Dicas e Insights para sua
+            <span className="text-primary"> Saúde Mental</span>
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+            Artigos escritos por especialistas para ajudar você a cuidar da sua mente e bem-estar emocional.
+          </p>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <Sidebar
-              categories={categories as CategoryWithCount[]}
-              tags={tags}
-              totalPosts={totalPosts}
+          {/* Search */}
+          <div className="relative max-w-md mx-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar artigos..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
             />
           </div>
         </div>
-      </main>
+      </section>
+
+      {/* Categories */}
+      <section className="px-4 pb-8">
+        <div className="container mx-auto max-w-6xl">
+          <div className="flex flex-wrap gap-2 justify-center">
+            <Button
+              variant={selectedCategory === null ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory(null)}
+            >
+              Todos
+            </Button>
+            {categories.map((category) => (
+              <Button
+                key={category.id}
+                variant={selectedCategory === category.slug ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(category.slug)}
+                style={{
+                  backgroundColor: selectedCategory === category.slug ? category.color : undefined,
+                  borderColor: category.color,
+                }}
+              >
+                {category.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Posts Grid */}
+      <section className="px-4 pb-16">
+        <div className="container mx-auto max-w-6xl">
+          {isLoading ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <Skeleton className="h-48 w-full" />
+                  <CardHeader>
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-6 w-full" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4 mt-2" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="text-center py-12">
+              <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Nenhum artigo encontrado</h3>
+              <p className="text-muted-foreground">
+                Tente buscar por outro termo ou categoria.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {posts.map((post) => (
+                <Link key={post.id} href={`/blog/${post.slug}`}>
+                  <Card className="overflow-hidden h-full hover:shadow-lg transition-shadow group">
+                    {post.coverImage ? (
+                      <div className="relative h-48 overflow-hidden">
+                        <img
+                          src={post.coverImage}
+                          alt={post.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                        <BookOpen className="h-12 w-12 text-primary/50" />
+                      </div>
+                    )}
+                    <CardHeader className="pb-2">
+                      <Badge
+                        variant="secondary"
+                        className="w-fit text-xs"
+                        style={{ backgroundColor: `${post.category.color}20`, color: post.category.color }}
+                      >
+                        {post.category.name}
+                      </Badge>
+                      <h2 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">
+                        {post.title}
+                      </h2>
+                    </CardHeader>
+                    <CardContent className="pb-2">
+                      {post.excerpt && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {post.excerpt}
+                        </p>
+                      )}
+                    </CardContent>
+                    <CardFooter className="text-xs text-muted-foreground gap-4">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {post.readingTime || 5} min
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        {post.viewCount}
+                      </div>
+                      <span className="ml-auto">
+                        {formatDistanceToNow(new Date(post.publishedAt), {
+                          addSuffix: true,
+                          locale: ptBR
+                        })}
+                      </span>
+                    </CardFooter>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   )
 }
-
-

@@ -13,7 +13,7 @@ export default function MoodPage() {
   }
 
   return (
-    <DashboardShell
+    <DashboardShell role="PATIENT"
       title="Registro de Humor"
       description="Acompanhe suas emoções ao longo do tempo"
       action={<ExportDataDialog />}

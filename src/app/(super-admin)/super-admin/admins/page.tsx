@@ -21,7 +21,7 @@ export default async function AdminsPage() {
   })
 
   return (
-    <DashboardShell>
+    <DashboardShell role="SUPER_ADMIN">
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gestão de Administradores</h1>

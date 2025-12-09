@@ -16,7 +16,7 @@ export default async function TherapistLayout({
 
   // THERAPIST, ADMIN e SUPER_ADMIN podem acessar esta área
   const allowedRoles: string[] = [Role.THERAPIST, Role.ADMIN, Role.SUPER_ADMIN]
-  
+
   if (!allowedRoles.includes(session.user.role)) {
     redirect("/unauthorized")
   }

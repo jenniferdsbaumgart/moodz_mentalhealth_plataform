@@ -23,7 +23,8 @@ import {
   Eye,
   Pin,
   Lock,
-  Loader2
+  Loader2,
+  MessageCircle
 } from "lucide-react"
 
 export default function PostPage() {
@@ -73,7 +74,7 @@ export default function PostPage() {
     )
   }
 
-  const categoryInfo = POST_CATEGORIES[post.category]
+  const categoryInfo = POST_CATEGORIES[post.category as keyof typeof POST_CATEGORIES]
   const timeAgo = formatDistanceToNow(new Date(post.createdAt), {
     addSuffix: true,
     locale: ptBR
@@ -158,7 +159,7 @@ export default function PostPage() {
                 {/* Tags */}
                 {post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-6">
-                    {post.tags.map(({ tag }) => (
+                    {post.tags.map(({ tag }: { tag: any }) => (
                       <Badge key={tag.id} variant="secondary" className="text-xs">
                         #{tag.name}
                       </Badge>
@@ -266,7 +267,7 @@ export default function PostPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-1">
-                    {post.tags.map(({ tag }) => (
+                    {post.tags.map(({ tag }: { tag: any }) => (
                       <Button
                         key={tag.id}
                         variant="outline"

@@ -17,7 +17,7 @@ export default async function PlatformLayout({
   // PATIENT, ADMIN e SUPER_ADMIN podem acessar esta área
   // (Admins podem querer ver a experiência do paciente)
   const allowedRoles: string[] = [Role.PATIENT, Role.ADMIN, Role.SUPER_ADMIN]
-  
+
   if (!allowedRoles.includes(session.user.role)) {
     redirect("/unauthorized")
   }

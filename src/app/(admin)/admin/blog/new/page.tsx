@@ -33,7 +33,7 @@ export default async function NewPostPage() {
   ])
 
   return (
-    <DashboardShell>
+    <DashboardShell role="ADMIN">
       <PostForm
         categories={categories}
         tags={tags}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,7 @@ import { CheckCircle2, XCircle, Loader2, Mail, AlertTriangle } from "lucide-reac
 
 type VerificationState = "loading" | "success" | "error" | "expired" | "no-token"
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const token = searchParams.get("token")
@@ -168,9 +168,8 @@ export default function VerifyEmailPage() {
             </Button>
 
             {resendMessage && (
-              <p className={`text-sm text-center ${
-                resendMessage.includes("enviado") ? "text-green-600" : "text-red-600"
-              }`}>
+              <p className={`text-sm text-center ${resendMessage.includes("enviado") ? "text-green-600" : "text-red-600"
+                }`}>
                 {resendMessage}
               </p>
             )}
@@ -187,3 +186,19 @@ export default function VerifyEmailPage() {
   )
 }
 
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+          <CardTitle>Carregando...</CardTitle>
+        </CardHeader>
+      </Card>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
+  )
+}

@@ -238,7 +238,7 @@ export default function JournalEntryPage() {
           {/* Tags */}
           {entry.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {entry.tags.map((tag, index) => (
+              {entry.tags.map((tag: string, index: number) => (
                 <Badge key={index} variant="secondary" className="flex items-center gap-1">
                   <Hash className="h-3 w-3" />
                   {tag}

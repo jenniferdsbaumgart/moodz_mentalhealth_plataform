@@ -81,7 +81,7 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
   })
 
   return (
-    <DashboardShell
+    <DashboardShell role="SUPER_ADMIN"
       title="Logs de Auditoria"
       description="Histórico de ações críticas na plataforma"
     >

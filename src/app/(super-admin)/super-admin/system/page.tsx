@@ -43,7 +43,7 @@ export default async function SystemPage() {
     db.user.count({
       where: {
         role: "THERAPIST",
-        therapistProfile: { isApproved: false },
+        therapistProfile: { isVerified: false },
       },
     }),
   ])
@@ -59,6 +59,7 @@ export default async function SystemPage() {
 
   return (
     <DashboardShell
+      role="SUPER_ADMIN"
       title="Painel de Controle do Sistema"
       description="Gerencie configurações, feature flags, serviços e logs da plataforma"
     >

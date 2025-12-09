@@ -141,7 +141,7 @@ export default function AchievementsPage() {
 
             return {
               ...badge,
-              progress,
+              progress: progress || undefined, // Ensure progress is undefined if null
             }
           }) || []
 

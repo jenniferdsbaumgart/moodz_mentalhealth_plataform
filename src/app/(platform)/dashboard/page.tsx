@@ -140,7 +140,7 @@ export default function PatientDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {data.recentBadges.map((badge) => (
+              {data.recentBadges.map((badge: any) => (
                 <div key={badge.id} className="flex items-center space-x-3 p-3 rounded-lg border">
                   <div className="text-2xl">{badge.icon}</div>
                   <div className="flex-1">
@@ -165,7 +165,7 @@ export default function PatientDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {data.upcomingSessions.map((session) => (
+              {data.upcomingSessions.map((session: any) => (
                 <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div className="flex-1">
                     <p className="text-sm font-medium">{session.title}</p>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -23,7 +23,7 @@ type ResetPasswordForm = z.infer<typeof resetPasswordSchema>
 
 type PageState = "form" | "loading" | "success" | "error" | "expired" | "no-token"
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const token = searchParams.get("token")
@@ -50,9 +50,9 @@ export default function ResetPasswordPage() {
       const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          token, 
-          password: data.password 
+        body: JSON.stringify({
+          token,
+          password: data.password
         }),
       })
 
@@ -247,3 +247,19 @@ export default function ResetPasswordPage() {
   )
 }
 
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <Loader2 className="h-6 w-6 text-primary animate-spin" />
+          </div>
+          <CardTitle>Carregando...</CardTitle>
+        </CardHeader>
+      </Card>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
+  )
+}

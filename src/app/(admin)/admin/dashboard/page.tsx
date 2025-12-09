@@ -91,7 +91,7 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {data.recentPosts.slice(0, 3).map((post) => (
+              {data.recentPosts.slice(0, 3).map((post: any) => (
                 <div key={post.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div className="flex-1">
                     <p className="font-medium">{post.title}</p>

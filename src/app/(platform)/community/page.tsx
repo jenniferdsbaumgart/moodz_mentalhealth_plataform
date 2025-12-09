@@ -10,11 +10,11 @@ import { CategoryTabs } from "@/components/community/category-tabs"
 import { FeedFilters } from "@/components/community/feed-filters"
 import { PostFeed } from "@/components/community/post-feed"
 import { Plus, MessageSquare, Users, TrendingUp } from "lucide-react"
-import { CommunityFiltersInput } from "@/types/community"
+import { CommunityFilters } from "@/types/community"
 
 export default function CommunityPage() {
-  const [filters, setFilters] = useState<CommunityFiltersInput>({
-    category: "all",
+  const [filters, setFilters] = useState<CommunityFilters>({
+    category: undefined,
     sortBy: "newest",
     page: 1,
     limit: 20,
@@ -31,7 +31,7 @@ export default function CommunityPage() {
     }))
   }
 
-  const handleFiltersChange = (newFilters: CommunityFiltersInput) => {
+  const handleFiltersChange = (newFilters: CommunityFilters) => {
     setFilters({
       ...newFilters,
       page: 1, // Reset to first page when filters change
