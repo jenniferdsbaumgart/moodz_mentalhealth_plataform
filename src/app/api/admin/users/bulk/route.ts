@@ -56,12 +56,12 @@ export async function POST(request: NextRequest) {
         break
       case "suspend":
         // Temporarily suspend users
-        const suspendUntil = data?.suspendUntil 
+        const suspendUntil = data?.suspendUntil
           ? new Date(data.suspendUntil)
           : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // Default 7 days
         const suspendResult = await db.user.updateMany({
           where: { id: { in: userIds } },
-          data: { 
+          data: {
             status: "SUSPENDED",
             // Store suspension end date in metadata or separate field
           }
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
         // Soft delete users (set status to DELETED)
         const deleteResult = await db.user.updateMany({
           where: { id: { in: userIds } },
-          data: { status: "INACTIVE" }
+          data: { status: "BANNED" }
         })
         result.affected = deleteResult.count
         break
@@ -123,8 +123,8 @@ export async function POST(request: NextRequest) {
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        action: `BULK_${action.toUpperCase()}`,
-        entityType: "USER",
+        action: action === "delete" ? "USER_DELETED" : (action === "ban" ? "USER_BANNED" : "USER_UPDATED"),
+        entity: "USER",
         entityId: userIds.join(","),
         details: JSON.stringify({ userIds, data, affected: result.affected })
       }

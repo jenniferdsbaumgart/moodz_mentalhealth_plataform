@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { ExerciseCategory, Difficulty } from "@prisma/client"
+import { ExerciseCategory, Difficulty, Prisma } from "@prisma/client"
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
       difficulty?: Difficulty
       isFeatured?: boolean
       OR?: Array<{
-        title?: { contains: string; mode: string }
-        description?: { contains: string; mode: string }
+        title?: { contains: string; mode: Prisma.QueryMode }
+        description?: { contains: string; mode: Prisma.QueryMode }
       }>
     } = {
       isActive: true,

@@ -5,7 +5,7 @@ import { pusherServer } from "@/lib/pusher"
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -16,7 +16,7 @@ export async function GET(
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Verify user has access to this session (is therapist or enrolled)
     const groupSession = await prisma.groupSession.findUnique({
@@ -86,7 +86,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authSession = await auth()
@@ -97,7 +97,7 @@ export async function POST(
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const { content } = await request.json()
 
     // Validate input
@@ -211,7 +211,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authSession = await auth()
@@ -222,7 +222,7 @@ export async function DELETE(
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const { messageId } = await request.json()
 
     if (!messageId) {

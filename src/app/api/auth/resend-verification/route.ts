@@ -9,8 +9,10 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limiting using centralized system
     const { allowed, response: rateLimitResponse } = await rateLimit(request)
-    if (!allowed) {
+    if (!allowed && rateLimitResponse) {
       return rateLimitResponse
+    } else if (!allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
 
     const { email } = await request.json()
@@ -79,8 +81,8 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(
-      { 
-        message: "Email de verificação enviado! Verifique sua caixa de entrada.", 
+      {
+        message: "Email de verificação enviado! Verifique sua caixa de entrada.",
         success: true,
       },
       { status: 200 }

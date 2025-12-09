@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db"
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -16,6 +16,7 @@ export async function POST(
     }
 
     const { value } = await request.json()
+    const { id: commentId } = await params
 
     // Validate vote value
     if (value !== 1 && value !== -1) {
@@ -27,7 +28,7 @@ export async function POST(
 
     // Check if comment exists
     const comment = await prisma.comment.findUnique({
-      where: { id: params.id },
+      where: { id: commentId },
       select: { id: true, authorId: true },
     })
 
@@ -51,7 +52,7 @@ export async function POST(
       where: {
         userId_commentId: {
           userId: session.user.id,
-          commentId: params.id,
+          commentId,
         },
       },
     })
@@ -74,7 +75,7 @@ export async function POST(
       await prisma.vote.create({
         data: {
           userId: session.user.id,
-          commentId: params.id,
+          commentId,
           value,
         },
       })
@@ -82,7 +83,7 @@ export async function POST(
 
     // Get updated vote count
     const voteCount = await prisma.vote.aggregate({
-      where: { commentId: params.id },
+      where: { commentId },
       _sum: { value: true },
     })
 
@@ -91,7 +92,7 @@ export async function POST(
       where: {
         userId_commentId: {
           userId: session.user.id,
-          commentId: params.id,
+          commentId,
         },
       },
       select: { value: true },

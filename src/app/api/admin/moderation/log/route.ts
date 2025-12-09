@@ -29,17 +29,11 @@ export async function GET(request: NextRequest) {
     const where: any = {
       action: {
         in: [
-          "RESOLVE_REPORT",
-          "DISMISS_REPORT",
-          "DELETE_POST",
-          "DELETE_COMMENT",
-          "BAN",
-          "SUSPEND",
-          "UNBAN",
-          "WARN",
-          "CHANGE_ROLE",
-          "BULK_BAN",
-          "BULK_SUSPEND"
+          "REPORT_RESOLVED",
+          "POST_DELETED",
+          "COMMENT_DELETED",
+          "USER_BANNED",
+          "USER_UPDATED" // Covers SUSPEND, WARN
         ]
       }
     }
@@ -60,7 +54,7 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           action: true,
-          entityType: true,
+          entity: true,
           entityId: true,
           details: true,
           createdAt: true,
@@ -85,13 +79,11 @@ export async function GET(request: NextRequest) {
       where: {
         action: {
           in: [
-            "RESOLVE_REPORT",
-            "DISMISS_REPORT",
-            "DELETE_POST",
-            "DELETE_COMMENT",
-            "BAN",
-            "SUSPEND",
-            "WARN"
+            "REPORT_RESOLVED",
+            "POST_DELETED",
+            "COMMENT_DELETED",
+            "USER_BANNED",
+            "USER_UPDATED"
           ]
         }
       }
@@ -135,12 +127,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
     const body = await request.json()
-    const { action, entityType, entityId, details } = body
+    const { action, entity, entityId, details } = body
     const log = await db.auditLog.create({
       data: {
         userId: session.user.id,
         action,
-        entityType,
+        entity,
         entityId,
         details: JSON.stringify(details)
       }

@@ -5,7 +5,7 @@ import { ApiResponse } from "@/types/user"
 import { notifySessionEnrollment } from "@/lib/notifications/triggers"
 
 interface RouteParams {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -19,11 +19,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    const { id } = await params
+
     // Check if user is enrolled in this session
     const enrollment = await db.sessionParticipant.findUnique({
       where: {
         sessionId_userId: {
-          sessionId: params.id,
+          sessionId: id,
           userId: session.user.id,
         }
       }
@@ -48,6 +50,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth()
+    const { id } = await params
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -56,9 +59,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+
+
     // Check if session exists and is enrollable
     const sessionData = await db.groupSession.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: { participants: true }
@@ -91,7 +96,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const existingEnrollment = await db.sessionParticipant.findUnique({
       where: {
         sessionId_userId: {
-          sessionId: params.id,
+          sessionId: id,
           userId: session.user.id,
         }
       }
@@ -119,14 +124,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Create enrollment
     await db.sessionParticipant.create({
       data: {
-        sessionId: params.id,
+        sessionId: id,
         userId: session.user.id,
         status: "REGISTERED",
       }
     })
 
     // Send notification about enrollment (non-blocking)
-    notifySessionEnrollment(params.id, session.user.id).catch(console.error)
+    notifySessionEnrollment(id, session.user.id).catch(console.error)
 
     return NextResponse.json({
       success: true,
@@ -152,11 +157,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    const { id } = await params
+
     // Check if enrollment exists
     const enrollment = await db.sessionParticipant.findUnique({
       where: {
         sessionId_userId: {
-          sessionId: params.id,
+          sessionId: id,
           userId: session.user.id,
         }
       }
@@ -171,7 +178,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // Check if session allows cancellation
     const sessionData = await db.groupSession.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { status: true, scheduledAt: true }
     })
 
@@ -198,7 +205,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     await db.sessionParticipant.delete({
       where: {
         sessionId_userId: {
-          sessionId: params.id,
+          sessionId: id,
           userId: session.user.id,
         }
       }

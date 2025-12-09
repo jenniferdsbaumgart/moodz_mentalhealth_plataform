@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const where: Prisma.SystemLogWhereInput = {}
 
     if (level && level !== "all") {
-      where.level = level as LogLevel
+      where.level = level.toLowerCase() as any
     }
 
     if (source && source !== "all") {
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 
     const log = await db.systemLog.create({
       data: {
-        level: body.level || "INFO",
+        level: body.level || "info",
         source: body.source,
         message: body.message,
         metadata: body.metadata,

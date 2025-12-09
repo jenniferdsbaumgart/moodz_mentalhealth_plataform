@@ -1,62 +1,84 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { Role } from "@prisma/client"
 
-export async function GET() {
-  const session = await auth()
-  if (!session?.user || session.user.role !== "THERAPIST") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+// GET /api/therapist/patients - List patients who attended therapist's sessions
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth()
 
-  const therapistId = session.user.id
+    if (!session?.user?.id || session.user.role !== Role.THERAPIST) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
-  // Buscar participantes únicos das sessões do terapeuta
-  const participants = await db.sessionParticipant.findMany({
-    where: {
-      session: { therapistId }
-    },
-    include: {
-      user: {
-        include: { profile: true }
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get("search")
+
+    // Get therapist profile
+    const therapistProfile = await db.therapistProfile.findUnique({
+      where: { userId: session.user.id }
+    })
+
+    if (!therapistProfile) {
+      return NextResponse.json({ error: "Therapist profile not found" }, { status: 404 })
+    }
+
+    // Find all unique patients who attended this therapist's sessions
+    const participants = await db.sessionParticipant.findMany({
+      where: {
+        session: {
+          therapistId: therapistProfile.id
+        },
+        status: "ATTENDED"
       },
-      session: true
-    },
-    orderBy: { joinedAt: "desc" }
-  })
+      include: {
+        user: {
+          include: {
+            patientProfile: true
+          }
+        },
+        session: true
+      },
+      orderBy: { createdAt: "desc" }
+    })
 
-  // Agrupar por usuário
-  const patientMap = new Map()
+    // Group by user and get unique patients
+    const patientMap = new Map()
 
-  for (const p of participants) {
-    const userId = p.userId
-    if (!patientMap.has(userId)) {
-      patientMap.set(userId, {
-        id: userId,
-        name: p.user.profile?.name || p.user.name,
-        email: p.user.email,
-        image: p.user.image,
-        sessionCount: 0,
-        lastSessionDate: p.session.scheduledAt,
-        categories: []
-      })
+    for (const p of participants) {
+      if (!patientMap.has(p.userId)) {
+        patientMap.set(p.userId, {
+          id: p.user.id,
+          name: p.user.name,
+          email: p.user.email,
+          image: p.user.image,
+          patientProfile: p.user.patientProfile,
+          sessionsAttended: 1,
+          lastSessionDate: p.session.scheduledAt
+        })
+      } else {
+        const existing = patientMap.get(p.userId)
+        existing.sessionsAttended++
+        if (new Date(p.session.scheduledAt) > new Date(existing.lastSessionDate)) {
+          existing.lastSessionDate = p.session.scheduledAt
+        }
+      }
     }
 
-    const patient = patientMap.get(userId)
-    patient.sessionCount++
-    if (p.session.scheduledAt > patient.lastSessionDate) {
-      patient.lastSessionDate = p.session.scheduledAt
+    let patients = Array.from(patientMap.values())
+
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase()
+      patients = patients.filter(
+        p => p.name?.toLowerCase().includes(searchLower) || p.email.toLowerCase().includes(searchLower)
+      )
     }
-    if (p.session.category && !patient.categories.includes(p.session.category)) {
-      patient.categories.push(p.session.category)
-    }
+
+    return NextResponse.json({ patients })
+  } catch (error) {
+    console.error("Error fetching therapist patients:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
-
-  const patients = Array.from(patientMap.values()).map(p => ({
-    ...p,
-    favoriteCategory: p.categories[0] || "Geral"
-  }))
-
-  return NextResponse.json({ patients })
 }
-
-

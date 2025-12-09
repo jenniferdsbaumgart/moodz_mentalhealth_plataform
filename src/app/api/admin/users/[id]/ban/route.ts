@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db"
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -39,8 +39,9 @@ export async function POST(
     }
 
     // Check if target user exists
+    const { id } = await params
     const targetUser = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -75,7 +76,7 @@ export async function POST(
 
     // Update user status to banned
     await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: "BANNED",
         updatedAt: new Date(),
@@ -85,29 +86,37 @@ export async function POST(
     // Delete all user's content
     await Promise.all([
       prisma.post.deleteMany({
-        where: { authorId: params.id },
+        where: { authorId: id },
       }),
       prisma.comment.deleteMany({
-        where: { authorId: params.id },
+        where: { authorId: id },
       }),
       prisma.vote.deleteMany({
-        where: { userId: params.id },
+        where: { userId: id },
       }),
     ])
 
     // Reset user's points (gamification penalty)
     await prisma.patientProfile.update({
-      where: { userId: params.id },
+      where: { userId: id },
       data: { points: 0 },
     })
 
-    // TODO: Log the ban action for audit trail
-    // This could be stored in a separate moderation log table
+    // Log the ban action
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: "USER_BANNED",
+        entity: "USER",
+        entityId: id,
+        details: { reason }
+      }
+    })
 
     return NextResponse.json({
       message: `Usuário ${targetUser.name || targetUser.email} foi banido com sucesso`,
       data: {
-        userId: params.id,
+        userId: id,
         reason,
         bannedAt: new Date(),
       },
@@ -123,7 +132,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -147,13 +156,25 @@ export async function DELETE(
       )
     }
 
+    const { id } = await params
+
     // Unban user
     await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: "ACTIVE",
         updatedAt: new Date(),
       },
+    })
+
+    // Log the unban action
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: "USER_UNBANNED",
+        entity: "USER",
+        entityId: id,
+      }
     })
 
     return NextResponse.json({

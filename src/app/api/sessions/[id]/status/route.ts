@@ -5,7 +5,7 @@ import { deleteDailyRoom } from "@/lib/daily-server"
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -16,7 +16,7 @@ export async function PATCH(
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const { status } = await request.json()
 
     // Validate status
@@ -77,7 +77,7 @@ export async function PATCH(
     }
 
     // Handle status changes
-    const updateData: { status: string; roomName?: null; roomUrl?: null } = { status }
+    const updateData: { status: "LIVE" | "COMPLETED" | "CANCELLED"; roomName?: null; roomUrl?: null } = { status: status as "LIVE" | "COMPLETED" | "CANCELLED" }
 
     if (status === "CANCELLED") {
       // Delete Daily.co room if exists

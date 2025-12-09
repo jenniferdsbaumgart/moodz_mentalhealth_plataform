@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
         },
         therapistProfile: role === "THERAPIST" ? {
           select: {
-            verified: true
+            isVerified: true
           }
         } : false
       },

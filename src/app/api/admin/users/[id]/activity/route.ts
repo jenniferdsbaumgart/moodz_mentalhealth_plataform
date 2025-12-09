@@ -1,72 +1,84 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+
 /**
  * GET /api/admin/users/[id]/activity
  * Get detailed activity history for a user
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+
     // Check if user is admin
     const admin = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
-    if (admin?.role !== "ADMIN") {
+
+    if (admin?.role !== "ADMIN" && admin?.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const userId = params.id
-    // Fetch user with all related data
-    const [
-      user,
-      posts,
-      comments,
-      sessions,
-      reportsReceived,
-      reportsSubmitted,
-      badges,
-      moodLogs,
-      auditLogs
-    ] = await Promise.all([
-      // Basic user info
-      db.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          status: true,
-          createdAt: true,
-          image: true,
-          therapistProfile: {
-            select: {
-              verified: true,
-              specialization: true,
-              crp: true
-            }
+
+    const { id: userId } = await params
+
+    // Fetch user basic info first
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        image: true,
+        therapistProfile: {
+          select: {
+            isVerified: true,
+            specializations: true,
+            crp: true
+          }
+        },
+        patientProfile: {
+          select: {
+            points: true,
+            level: true
+          }
+        },
+        profile: {
+          select: {
+            bio: true
           }
         }
-      }),
+      }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    // Fetch details in parallel
+    const [posts, comments, sessions, reports, badges, moodLogs, auditLogs] = await Promise.all([
       // Posts
       db.post.findMany({
         where: { authorId: userId },
         select: {
           id: true,
           title: true,
+          content: true,
           category: true,
           createdAt: true,
           _count: { select: { comments: true, votes: true } }
         },
         orderBy: { createdAt: "desc" },
-        take: 20
+        take: 10
       }),
       // Comments
       db.comment.findMany({
@@ -78,9 +90,9 @@ export async function GET(
           post: { select: { id: true, title: true } }
         },
         orderBy: { createdAt: "desc" },
-        take: 20
+        take: 10
       }),
-      // Sessions participated
+      // Sessions
       db.sessionParticipant.findMany({
         where: { userId: userId },
         select: {
@@ -98,154 +110,110 @@ export async function GET(
           }
         },
         orderBy: { joinedAt: "desc" },
-        take: 20
+        take: 5
       }),
-      // Reports received (against this user's content)
-      db.report.findMany({
-        where: {
-          OR: [
-            { contentId: { in: await db.post.findMany({ where: { authorId: userId }, select: { id: true } }).then(p => p.map(x => x.id)) } },
-            { contentId: { in: await db.comment.findMany({ where: { authorId: userId }, select: { id: true } }).then(c => c.map(x => x.id)) } }
-          ]
-        },
-        select: {
-          id: true,
-          reason: true,
-          status: true,
-          contentType: true,
-          createdAt: true
-        },
-        orderBy: { createdAt: "desc" },
-        take: 20
-      }),
-      // Reports submitted by user
+      // Reports (authored by user)
       db.report.findMany({
         where: { reporterId: userId },
-        select: {
-          id: true,
-          reason: true,
-          status: true,
-          contentType: true,
-          createdAt: true
-        },
-        orderBy: { createdAt: "desc" },
-        take: 10
+        take: 5,
+        orderBy: { createdAt: "desc" }
       }),
-      // Badges earned
+      // Badges
       db.userBadge.findMany({
         where: { userId: userId },
-        select: {
-          id: true,
-          earnedAt: true,
-          badge: {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              icon: true
-            }
-          }
-        },
-        orderBy: { earnedAt: "desc" }
+        include: { badge: true },
+        orderBy: { unlockedAt: "desc" },
+        take: 10
       }),
-      // Mood logs (last 30)
+      // Mood Logs
       db.userMoodLog.findMany({
         where: { userId: userId },
         select: {
-          id: true,
-          moodScore: true,
-          factors: true,
+          mood: true,
           createdAt: true
         },
         orderBy: { createdAt: "desc" },
         take: 30
       }),
-      // Audit logs for this user
+      // Audit Logs
       db.auditLog.findMany({
         where: {
           OR: [
             { userId: userId },
-            { entityType: "USER", entityId: userId }
+            { entityId: userId, entity: "USER" }
           ]
         },
-        select: {
-          id: true,
-          action: true,
-          entityType: true,
-          details: true,
-          createdAt: true,
-          user: { select: { name: true, email: true } }
-        },
-        orderBy: { createdAt: "desc" },
-        take: 50
+        take: 20,
+        orderBy: { createdAt: "desc" }
       })
     ])
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
+
     // Calculate stats
     const stats = {
-      totalPosts: posts.length,
-      totalComments: comments.length,
-      totalSessions: sessions.length,
-      reportsReceived: reportsReceived.length,
-      reportsSubmitted: reportsSubmitted.length,
-      badgesEarned: badges.length,
-      avgMoodScore: moodLogs.length > 0
-        ? moodLogs.reduce((sum, log) => sum + log.moodScore, 0) / moodLogs.length
-        : null
+      postsCount: await db.post.count({ where: { authorId: userId } }),
+      commentsCount: await db.comment.count({ where: { authorId: userId } }),
+      sessionsCount: await db.sessionParticipant.count({
+        where: { userId: userId, status: "ATTENDED" }
+      }),
+      reportsCount: await db.report.count({
+        where: { reporterId: userId }
+      }),
+      avgMood: moodLogs.length > 0
+        ? moodLogs.reduce((acc: number, log) => acc + log.mood, 0) / moodLogs.length
+        : 0
     }
-    // Build activity timeline
+
+    // Build timeline
     const timeline = [
       ...posts.map(p => ({
-        type: "post" as const,
         id: p.id,
+        type: "post",
         title: p.title,
-        date: p.createdAt,
-        details: { category: p.category, comments: p._count.comments, votes: p._count.votes }
+        content: p.content.substring(0, 100),
+        createdAt: p.createdAt,
+        details: { category: p.category, ...p._count }
       })),
       ...comments.map(c => ({
-        type: "comment" as const,
         id: c.id,
-        title: `Comentário em "${c.post.title}"`,
-        date: c.createdAt,
-        details: { postId: c.post.id }
+        type: "comment",
+        content: c.content.substring(0, 100),
+        createdAt: c.createdAt,
+        details: { postTitle: c.post?.title }
       })),
-      ...sessions.map(s => ({
-        type: "session" as const,
-        id: s.id,
-        title: s.session.title,
-        date: s.joinedAt,
-        details: { category: s.session.category, status: s.session.status }
-      })),
-      ...badges.map(b => ({
-        type: "badge" as const,
-        id: b.id,
-        title: `Conquistou badge "${b.badge.name}"`,
-        date: b.earnedAt,
-        details: { badgeId: b.badge.id, icon: b.badge.icon }
+      ...auditLogs.map(l => ({
+        id: l.id,
+        type: "audit",
+        action: l.action,
+        details: l.details,
+        createdAt: l.createdAt
       }))
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 50)
+
     return NextResponse.json({
-      user,
-      stats,
-      activity: {
-        posts,
-        comments,
-        sessions,
-        reportsReceived,
-        reportsSubmitted,
-        badges,
-        moodLogs
+      user: {
+        ...user,
+        profile: user.patientProfile || user.therapistProfile || user.profile,
+        type: user.role === "THERAPIST" ? "therapist" : "patient"
       },
       timeline,
-      auditLogs
+      stats,
+      recentActivity: {
+        sessions,
+        reports,
+        badges: badges.map(b => ({
+          ...b,
+          badgeName: b.badge.name,
+          badgeIcon: b.badge.icon
+        })),
+        moodHistory: moodLogs
+      }
     })
+
   } catch (error) {
     console.error("Error fetching user activity:", error)
     return NextResponse.json(
-      { error: "Failed to fetch user activity" },
+      { error: "Internal Server Error" },
       { status: 500 }
     )
   }

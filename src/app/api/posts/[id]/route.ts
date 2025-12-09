@@ -5,14 +5,15 @@ import { updatePostSchema } from "@/lib/validations/post"
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
     const userId = session?.user?.id
+    const { id } = await params
 
     const post = await prisma.post.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         author: {
           select: {
@@ -53,20 +54,20 @@ export async function GET(
     // Increment view count (but not for the author)
     if (userId !== post.authorId) {
       await prisma.post.update({
-        where: { id: params.id },
+        where: { id },
         data: { viewCount: { increment: 1 } },
       })
       post.viewCount += 1
     }
 
     // Add user vote information if user is logged in
-    let postWithVote = post
+    let postWithVote: any = post
     if (userId) {
       const userVote = await prisma.vote.findUnique({
         where: {
           userId_postId: {
             userId,
-            postId: params.id,
+            postId: id,
           },
         },
         select: {
@@ -97,7 +98,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -108,8 +109,10 @@ export async function PATCH(
       )
     }
 
+    const { id } = await params
+
     const post = await prisma.post.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { authorId: true },
     })
 
@@ -131,7 +134,7 @@ export async function PATCH(
     const validatedData = updatePostSchema.parse(body)
 
     const updatedPost = await prisma.post.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         title: validatedData.title,
         content: validatedData.content,
@@ -139,11 +142,11 @@ export async function PATCH(
         isAnonymous: validatedData.isAnonymous,
         tags: validatedData.tags
           ? {
-              deleteMany: {},
-              create: validatedData.tags.map(tagId => ({
-                tagId,
-              })),
-            }
+            deleteMany: {},
+            create: validatedData.tags.map(tagId => ({
+              tagId,
+            })),
+          }
           : undefined,
         updatedAt: new Date(),
       },
@@ -178,7 +181,7 @@ export async function PATCH(
     })
 
     return NextResponse.json({ data: updatedPost })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating post:", error)
     if (error.name === "ZodError") {
       return NextResponse.json(
@@ -195,7 +198,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -206,8 +209,10 @@ export async function DELETE(
       )
     }
 
+    const { id } = await params
+
     const post = await prisma.post.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { authorId: true },
     })
 
@@ -226,7 +231,7 @@ export async function DELETE(
     }
 
     await prisma.post.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ message: "Post deletado com sucesso" })

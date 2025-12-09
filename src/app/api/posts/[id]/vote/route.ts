@@ -5,7 +5,7 @@ import { notifyPostUpvoted } from "@/lib/notifications/triggers"
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -15,6 +15,8 @@ export async function POST(
         { status: 401 }
       )
     }
+
+    const { id } = await params
 
     const { value } = await request.json()
 
@@ -28,7 +30,7 @@ export async function POST(
 
     // Check if post exists
     const post = await prisma.post.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { id: true, authorId: true },
     })
 
@@ -52,7 +54,7 @@ export async function POST(
       where: {
         userId_postId: {
           userId: session.user.id,
-          postId: params.id,
+          postId: id,
         },
       },
     })
@@ -80,7 +82,7 @@ export async function POST(
       await prisma.vote.create({
         data: {
           userId: session.user.id,
-          postId: params.id,
+          postId: id,
           value,
         },
       })
@@ -96,7 +98,7 @@ export async function POST(
       })
 
       // Notify post author about upvote (non-blocking)
-      notifyPostUpvoted(params.id, session.user.id).catch(console.error)
+      notifyPostUpvoted(id, session.user.id).catch(console.error)
     } else if (existingVote && existingVote.value === 1 && voteValue !== 1) {
       // User removed their upvote - deduct points
       await prisma.patientProfile.update({
@@ -107,7 +109,7 @@ export async function POST(
 
     // Get updated vote count
     const voteCount = await prisma.vote.aggregate({
-      where: { postId: params.id },
+      where: { postId: id },
       _sum: { value: true },
     })
 
@@ -116,7 +118,7 @@ export async function POST(
       where: {
         userId_postId: {
           userId: session.user.id,
-          postId: params.id,
+          postId: id,
         },
       },
       select: { value: true },

@@ -4,7 +4,7 @@ import { db as prisma } from "@/lib/db"
 // DELETE - Desbloquear uma data específica
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -14,7 +14,7 @@ export async function DELETE(
         { status: 403 }
       )
     }
-    const { id } = params
+    const { id } = await params
     // Buscar perfil do terapeuta
     const therapistProfile = await prisma.therapistProfile.findUnique({
       where: {

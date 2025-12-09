@@ -6,14 +6,14 @@ import { createAuditLog } from "@/lib/audit/service"
 // DELETE - Remover admin (soft delete ou hard delete)
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
   if (session?.user?.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
   }
 
-  const { id } = params
+  const { id } = await params
 
   // Não permitir auto-remoção
   if (id === session.user.id) {

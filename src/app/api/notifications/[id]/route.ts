@@ -1,13 +1,26 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+
+/**
+ * Helper to get notification safely
+ */
+async function getNotification(id: string, userId: string) {
+  return await db.notification.findUnique({
+    where: {
+      id,
+      userId
+    }
+  })
+}
+
 /**
  * GET /api/notifications/[id]
  * Get a specific notification
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -17,12 +30,8 @@ export async function GET(
         { status: 401 }
       )
     }
-    const notification = await db.notification.findUnique({
-      where: {
-        id: params.id,
-        userId: session.user.id
-      }
-    })
+    const { id } = await params
+    const notification = await getNotification(id, session.user.id)
     if (!notification) {
       return NextResponse.json(
         { error: "Notification not found" },
@@ -38,13 +47,14 @@ export async function GET(
     )
   }
 }
+
 /**
  * PATCH /api/notifications/[id]
  * Update a notification (e.g., mark as read)
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -54,20 +64,18 @@ export async function PATCH(
         { status: 401 }
       )
     }
+    const { id } = await params
     const body = await request.json()
+
     // Verify the notification belongs to the user
-    const existingNotification = await db.notification.findUnique({
-      where: {
-        id: params.id,
-        userId: session.user.id
-      }
-    })
+    const existingNotification = await getNotification(id, session.user.id)
     if (!existingNotification) {
       return NextResponse.json(
         { error: "Notification not found" },
         { status: 404 }
       )
     }
+
     const updateData: any = {}
     if (body.read !== undefined) {
       updateData.read = body.read
@@ -75,10 +83,12 @@ export async function PATCH(
         updateData.readAt = new Date()
       }
     }
+
     const notification = await db.notification.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData
     })
+
     return NextResponse.json(notification)
   } catch (error) {
     console.error("Error updating notification:", error)
@@ -88,13 +98,14 @@ export async function PATCH(
     )
   }
 }
+
 /**
  * DELETE /api/notifications/[id]
  * Delete a specific notification
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -104,22 +115,21 @@ export async function DELETE(
         { status: 401 }
       )
     }
+    const { id } = await params
+
     // Verify the notification belongs to the user
-    const existingNotification = await db.notification.findUnique({
-      where: {
-        id: params.id,
-        userId: session.user.id
-      }
-    })
+    const existingNotification = await getNotification(id, session.user.id)
     if (!existingNotification) {
       return NextResponse.json(
         { error: "Notification not found" },
         { status: 404 }
       )
     }
+
     await db.notification.delete({
-      where: { id: params.id }
+      where: { id }
     })
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error deleting notification:", error)

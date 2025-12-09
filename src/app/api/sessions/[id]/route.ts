@@ -5,7 +5,7 @@ import { updateSessionSchema } from "@/lib/validations/session"
 import { ApiResponse } from "@/types/user"
 
 interface RouteParams {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -19,8 +19,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    const { id } = await params
+
     const sessionData = await db.groupSession.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         participants: {
           include: {
@@ -85,6 +87,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    const { id } = await params
     const body = await request.json()
 
     // Validate input
@@ -94,7 +97,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         {
           success: false,
           message: "Dados inválidos",
-          error: validationResult.error.issues,
+          error: validationResult.error.issues.map(i => i.message).join(", "),
         } as ApiResponse,
         { status: 400 }
       )
@@ -102,7 +105,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     // Get the session to check ownership
     const existingSession = await db.groupSession.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingSession) {
@@ -135,7 +138,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     const updatedSession = await db.groupSession.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         _count: {
@@ -169,9 +172,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    const { id } = await params
+
     // Get the session to check ownership
     const existingSession = await db.groupSession.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingSession) {
@@ -205,7 +210,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     await db.groupSession.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({

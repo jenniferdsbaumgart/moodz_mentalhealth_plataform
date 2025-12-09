@@ -84,9 +84,7 @@ export async function POST(request: Request) {
         role: "ADMIN",
         status: "PENDING", // Aguardando primeiro login
         profile: {
-          create: {
-            displayName: name,
-          },
+          create: {},
         },
       },
     })
@@ -108,7 +106,7 @@ export async function POST(request: Request) {
     return NextResponse.json(newAdmin, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     console.error("Erro ao criar admin:", error)
     return NextResponse.json(

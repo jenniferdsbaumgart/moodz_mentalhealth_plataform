@@ -7,7 +7,7 @@ import { db } from "@/lib/db"
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -21,7 +21,7 @@ export async function DELETE(
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const postId = params.id
+    const { id: postId } = await params
     // Get post info before deletion for logging
     const post = await db.post.findUnique({
       where: { id: postId },
@@ -43,15 +43,15 @@ export async function DELETE(
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        action: "DELETE_POST",
-        entityType: "POST",
+        action: "POST_DELETED",
+        entity: "POST",
         entityId: postId,
-        details: JSON.stringify({
+        details: {
           postTitle: post.title,
           authorId: post.authorId,
           authorName: post.author.name,
           authorEmail: post.author.email
-        })
+        }
       }
     })
     return NextResponse.json({ success: true })
@@ -63,13 +63,14 @@ export async function DELETE(
     )
   }
 }
+
 /**
  * GET /api/admin/posts/[id]
  * Get post details for moderation
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -83,8 +84,9 @@ export async function GET(
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
+    const { id: postId } = await params
     const post = await db.post.findUnique({
-      where: { id: params.id },
+      where: { id: postId },
       include: {
         author: {
           select: {

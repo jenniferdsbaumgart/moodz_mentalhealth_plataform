@@ -80,7 +80,7 @@ export async function PATCH(
     // Log the action
     await db.systemLog.create({
       data: {
-        level: "INFO",
+        level: "info",
         source: "api",
         message: `Feature flag "${flag.name}" updated`,
         metadata: {
@@ -95,7 +95,7 @@ export async function PATCH(
     return NextResponse.json(flag)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     console.error("Error updating feature flag:", error)
     return NextResponse.json(
@@ -136,7 +136,7 @@ export async function DELETE(
     // Log the action
     await db.systemLog.create({
       data: {
-        level: "INFO",
+        level: "info",
         source: "api",
         message: `Feature flag "${existing.name}" deleted`,
         metadata: {

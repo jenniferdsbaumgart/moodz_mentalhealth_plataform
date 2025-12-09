@@ -1,258 +1,124 @@
+import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { NextRequest, NextResponse } from "next/server"
-import { blogPostUpdateSchema } from "@/lib/validations/blog"
-import { generateSlug, calculateReadingTime, extractExcerpt } from "@/lib/blog/utils"
-import { createAuditLog } from "@/lib/audit/service"
-import { AuditAction } from "@prisma/client"
+import { Role } from "@prisma/client"
 
-// GET /api/admin/blog/posts/[id] - Buscar post por ID
+// GET /api/admin/blog/posts/[id] - Get single post
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user || !["ADMIN", "THERAPIST", "SUPER_ADMIN"].includes(session.user.role)) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
-  }
-
   try {
+    const session = await auth()
+
+    if (!session?.user?.id || !([Role.ADMIN, Role.SUPER_ADMIN] as Role[]).includes(session.user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { id } = await params
+
     const post = await db.blogPost.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
-        author: {
-          select: { id: true, name: true, email: true }
-        },
-        category: {
-          select: { id: true, name: true, slug: true, color: true, icon: true }
-        },
-        tags: {
-          include: {
-            tag: {
-              select: { id: true, name: true, slug: true }
-            }
-          }
-        },
-      },
+        author: { select: { name: true } },
+        category: { select: { id: true, name: true, color: true } },
+        tags: { include: { tag: true } }
+      }
     })
 
     if (!post) {
-      return NextResponse.json({ error: "Post não encontrado" }, { status: 404 })
+      return NextResponse.json({ error: "Post not found" }, { status: 404 })
     }
 
     return NextResponse.json(post)
   } catch (error) {
-    console.error("Erro ao buscar post:", error)
-    return NextResponse.json(
-      { error: "Erro interno do servidor" },
-      { status: 500 }
-    )
+    console.error("Error fetching blog post:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }
 
-// PATCH /api/admin/blog/posts/[id] - Atualizar post
-export async function PATCH(
+// PUT /api/admin/blog/posts/[id] - Update post
+export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user || !["ADMIN", "THERAPIST", "SUPER_ADMIN"].includes(session.user.role)) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
-  }
-
   try {
+    const session = await auth()
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { id } = await params
     const body = await request.json()
+    const { title, slug, excerpt, content, coverImage, categoryId, status } = body
 
-    // Validar dados (partial)
-    const validatedData = blogPostUpdateSchema.parse({ ...body, id: params.id })
-
-    // Verificar se post existe
-    const existingPost = await db.blogPost.findUnique({
-      where: { id: params.id },
-    })
-
-    if (!existingPost) {
-      return NextResponse.json({ error: "Post não encontrado" }, { status: 404 })
+    const existing = await db.blogPost.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 })
     }
 
-    // Verificar permissões: therapist só pode editar seus próprios posts
-    if (session.user.role === "THERAPIST" && existingPost.authorId !== session.user.id) {
-      return NextResponse.json({ error: "Você só pode editar seus próprios posts" }, { status: 403 })
-    }
-
-    // Preparar dados para atualização
-    const updateData: any = {}
-
-    if (validatedData.title !== undefined) {
-      updateData.title = validatedData.title
-
-      // Regenerar slug se título mudou
-      const newSlug = validatedData.slug || generateSlug(validatedData.title)
-      if (newSlug !== existingPost.slug) {
-        // Verificar se novo slug já existe (exceto o próprio post)
-        const slugExists = await db.blogPost.findFirst({
-          where: {
-            slug: newSlug,
-            id: { not: params.id },
-          },
-        })
-
-        if (slugExists) {
-          return NextResponse.json(
-            { error: "Slug já existe. Escolha um título diferente." },
-            { status: 400 }
-          )
-        }
-
-        updateData.slug = newSlug
+    // Check if new slug is unique (if changed)
+    if (slug !== existing.slug) {
+      const slugExists = await db.blogPost.findUnique({ where: { slug } })
+      if (slugExists) {
+        return NextResponse.json({ error: "Slug já existe" }, { status: 400 })
       }
     }
 
-    if (validatedData.excerpt !== undefined) {
-      updateData.excerpt = validatedData.excerpt
+    // Calculate reading time
+    const wordCount = content.replace(/<[^>]*>/g, "").split(/\s+/).length
+    const readingTime = Math.ceil(wordCount / 200)
+
+    // Determine publishedAt
+    let publishedAt = existing.publishedAt
+    if (status === "PUBLISHED" && !existing.publishedAt) {
+      publishedAt = new Date()
+    } else if (status !== "PUBLISHED") {
+      publishedAt = null
     }
 
-    if (validatedData.content !== undefined) {
-      updateData.content = validatedData.content
-      updateData.readingTime = calculateReadingTime(validatedData.content)
-
-      // Regenerar excerpt se não foi fornecido
-      if (validatedData.excerpt === undefined) {
-        updateData.excerpt = extractExcerpt(validatedData.content)
-      }
-    }
-
-    if (validatedData.coverImage !== undefined) {
-      updateData.coverImage = validatedData.coverImage
-    }
-
-    if (validatedData.status !== undefined) {
-      updateData.status = validatedData.status
-    }
-
-    if (validatedData.publishedAt !== undefined) {
-      updateData.publishedAt = validatedData.publishedAt ? new Date(validatedData.publishedAt) : null
-    }
-
-    if (validatedData.categoryId !== undefined) {
-      updateData.categoryId = validatedData.categoryId
-    }
-
-    // Atualizar tags se fornecidas
-    if (validatedData.tagIds !== undefined) {
-      // Remover tags existentes
-      await db.blogPostTag.deleteMany({
-        where: { postId: params.id },
-      })
-
-      // Adicionar novas tags
-      if (validatedData.tagIds.length > 0) {
-        updateData.tags = {
-          create: validatedData.tagIds.map(tagId => ({
-            tagId,
-          })),
-        }
-      }
-    }
-
-    // Atualizar post
     const post = await db.blogPost.update({
-      where: { id: params.id },
-      data: updateData,
-      include: {
-        author: {
-          select: { id: true, name: true, email: true }
-        },
-        category: {
-          select: { id: true, name: true, slug: true, color: true }
-        },
-        tags: {
-          include: {
-            tag: {
-              select: { id: true, name: true, slug: true }
-            }
-          }
-        },
-      },
-    })
-
-    // Log de auditoria
-    await createAuditLog({
-      userId: session.user.id,
-      action: AuditAction.POST_DELETED, // TODO: Add BLOG_POST_UPDATED
-      entity: "BlogPost",
-      entityId: post.id,
-      details: {
-        title: post.title,
-        changes: Object.keys(updateData),
-      },
+      where: { id },
+      data: {
+        title,
+        slug,
+        excerpt: excerpt || null,
+        content,
+        coverImage: coverImage || null,
+        categoryId,
+        status,
+        readingTime,
+        publishedAt
+      }
     })
 
     return NextResponse.json(post)
   } catch (error) {
-    if (error.name === "ZodError") {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
-    }
-
-    console.error("Erro ao atualizar post:", error)
-    return NextResponse.json(
-      { error: "Erro interno do servidor" },
-      { status: 500 }
-    )
+    console.error("Error updating blog post:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }
 
-// DELETE /api/admin/blog/posts/[id] - Deletar post
+// DELETE /api/admin/blog/posts/[id] - Delete post
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user || session.user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Apenas Super Admin pode deletar posts" }, { status: 403 })
-  }
-
   try {
-    // Verificar se post existe
-    const existingPost = await db.blogPost.findUnique({
-      where: { id: params.id },
-      select: { id: true, title: true, authorId: true },
-    })
+    const session = await auth()
 
-    if (!existingPost) {
-      return NextResponse.json({ error: "Post não encontrado" }, { status: 404 })
+    if (!session?.user?.id || !([Role.ADMIN, Role.SUPER_ADMIN] as Role[]).includes(session.user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Verificar se usuário pode deletar (próprio post ou admin)
-    if (existingPost.authorId !== session.user.id && session.user.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Você não tem permissão para deletar este post" },
-        { status: 403 }
-      )
-    }
+    const { id } = await params
 
-    // Deletar post (cascade delete remove tags automaticamente)
-    await db.blogPost.delete({
-      where: { id: params.id },
-    })
-
-    // Log de auditoria
-    await createAuditLog({
-      userId: session.user.id,
-      action: AuditAction.POST_DELETED,
-      entity: "BlogPost",
-      entityId: params.id,
-      details: {
-        title: existingPost.title,
-      },
-    })
+    await db.blogPost.delete({ where: { id } })
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Erro ao deletar post:", error)
-    return NextResponse.json(
-      { error: "Erro interno do servidor" },
-      { status: 500 }
-    )
+    console.error("Error deleting blog post:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }

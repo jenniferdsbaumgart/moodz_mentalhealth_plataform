@@ -26,17 +26,18 @@ export async function GET(request: NextRequest) {
     // Get report counts by status
     const [
       pendingCount,
-      inReviewCount,
+      // inReviewCount,
       resolvedCount,
       dismissedCount,
       totalReports
     ] = await Promise.all([
       db.report.count({ where: { status: "PENDING" } }),
-      db.report.count({ where: { status: "IN_REVIEW" } }),
+      // db.report.count({ where: { status: "IN_REVIEW" } }),
       db.report.count({ where: { status: "RESOLVED" } }),
       db.report.count({ where: { status: "DISMISSED" } }),
       db.report.count()
     ])
+    const inReviewCount = 0
     // Get reports by reason/type
     const reportsByReason = await db.report.groupBy({
       by: ["reason"],
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       }
     })
     // Calculate average resolution time (for resolved reports this month)
-    const resolvedReports = await db.report.findMany({
+    const resolvedReportsData = await db.report.findMany({
       where: {
         resolvedAt: { gte: monthStart },
         status: { in: ["RESOLVED", "DISMISSED"] }
@@ -69,22 +70,29 @@ export async function GET(request: NextRequest) {
       }
     })
     let avgResolutionTime = 0
-    if (resolvedReports.length > 0) {
-      const totalTime = resolvedReports.reduce((sum, report) => {
+    if (resolvedReportsData.length > 0) {
+      const totalTime = resolvedReportsData.reduce((sum, report) => {
         if (report.resolvedAt) {
           return sum + (report.resolvedAt.getTime() - report.createdAt.getTime())
         }
         return sum
       }, 0)
-      avgResolutionTime = totalTime / resolvedReports.length / (1000 * 60 * 60) // Convert to hours
+      avgResolutionTime = totalTime / resolvedReportsData.length / (1000 * 60 * 60) // Convert to hours
     }
     // Get most active moderators
     const moderatorActions = await db.auditLog.groupBy({
       by: ["userId"],
       _count: { id: true },
       where: {
-        action: { in: ["RESOLVE_REPORT", "DISMISS_REPORT", "BAN", "SUSPEND", "WARN"] },
-        createdAt: { gte: weekStart }
+        action: {
+          in: [
+            "REPORT_RESOLVED",
+            "POST_DELETED",
+            "COMMENT_DELETED",
+            "USER_BANNED",
+            "USER_UPDATED"
+          ]
+        }, createdAt: { gte: weekStart }
       },
       orderBy: { _count: { id: "desc" } },
       take: 5
@@ -139,7 +147,7 @@ export async function GET(request: NextRequest) {
       low: pendingReportsByPriority.filter(r => ["SPAM", "OTHER"].includes(r.reason)).length
     }
     // Resolution rate
-    const resolutionRate = totalReports > 0 
+    const resolutionRate = totalReports > 0
       ? Math.round(((resolvedCount + dismissedCount) / totalReports) * 100)
       : 0
     return NextResponse.json({

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db"
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -28,6 +28,7 @@ export async function PATCH(
       )
     }
 
+    const { id } = await params
     const { action, resolution } = await request.json()
 
     // Validate action
@@ -41,7 +42,7 @@ export async function PATCH(
 
     // Get report with related content
     const report = await prisma.report.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         post: {
           select: {
@@ -81,7 +82,7 @@ export async function PATCH(
       case "DISMISS":
         // Just mark as dismissed
         await prisma.report.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             status: "DISMISSED",
             resolvedAt: new Date(),
@@ -94,7 +95,7 @@ export async function PATCH(
       case "RESOLVE":
         // Mark as resolved without taking action
         await prisma.report.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             status: "RESOLVED",
             resolvedAt: new Date(),
@@ -118,7 +119,7 @@ export async function PATCH(
 
         // Mark report as resolved
         await prisma.report.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             status: "RESOLVED",
             resolvedAt: new Date(),
@@ -129,7 +130,7 @@ export async function PATCH(
 
         // Deduct points from content author (gamification penalty)
         if (contentAuthorId) {
-          await prisma.patientProfile.update({
+          await prisma.patientProfile.updateMany({
             where: { userId: contentAuthorId },
             data: { points: { decrement: 10 } }, // Penalty for removed content
           })
@@ -146,6 +147,19 @@ export async function PATCH(
               updatedAt: new Date(),
             },
           })
+
+          await prisma.auditLog.create({
+            data: {
+              userId: session.user.id,
+              action: "USER_BANNED",
+              entity: "USER",
+              entityId: contentAuthorId,
+              details: {
+                reason: "Banido via resolução de denúncia",
+                reportId: id
+              }
+            }
+          })
         }
 
         // Delete all their content (optional - could be configurable)
@@ -155,13 +169,9 @@ export async function PATCH(
           })
         }
 
-        await prisma.comment.deleteMany({
-          where: { authorId: contentAuthorId },
-        })
-
         // Mark report as resolved
         await prisma.report.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             status: "RESOLVED",
             resolvedAt: new Date(),

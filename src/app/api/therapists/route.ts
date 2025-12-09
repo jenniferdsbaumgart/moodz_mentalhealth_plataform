@@ -1,29 +1,8 @@
-// Mock data para terapeutas
-const mockTherapists = [
-  {
-    id: "therapist-1",
-    name: "Dra. Ana Silva",
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face",
-    bio: "Psicóloga clínica com 12 anos de experiência em terapia cognitivo-comportamental.",
-    specializations: ["Psicologia Clínica", "TCC"],
-    specialties: ["Ansiedade", "Depressão"],
-    languages: ["Português", "Inglês"],
-    availableForNew: true,
-    isVerified: true,
-    sessionPrice: 150,
-    currency: "BRL",
-    stats: {
-      totalSessions: 1247,
-      totalPatients: 89,
-      avgRating: 4.8
-    },
-    _count: {
-      reviews: 23
-    }
-  }
-]
 
-// Mock data para terapeutas (em produção seria do banco)
+
+import { NextRequest, NextResponse } from "next/server"
+
+// Mock data para terapeutas
 const mockTherapists = [
   {
     id: "therapist-1",
@@ -184,7 +163,7 @@ export async function GET(request: NextRequest) {
       // Specialization filter
       if (specialization !== "all") {
         if (!therapist.specializations.includes(specialization) &&
-            !therapist.specialties.includes(specialization)) {
+          !therapist.specialties.includes(specialization)) {
           return false
         }
       }

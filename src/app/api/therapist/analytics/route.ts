@@ -15,6 +15,7 @@ import {
   isWithinInterval,
   parseISO
 } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 export async function GET(request: NextRequest) {
   const session = await auth()
@@ -198,7 +199,7 @@ export async function GET(request: NextRequest) {
     }).length
 
     sessionsByMonth.push({
-      month: format(date, "MMM", { locale: { code: 'pt-BR' } }),
+      month: format(date, "MMM", { locale: ptBR }),
       count
     })
   }

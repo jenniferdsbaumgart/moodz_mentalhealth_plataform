@@ -4,9 +4,9 @@ import { prisma } from "@/lib/db"
 import { GamificationService } from "@/lib/gamification"
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     const { duration, rating, notes } = body
 

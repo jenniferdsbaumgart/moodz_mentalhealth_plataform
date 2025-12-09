@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth"
 import { db as prisma } from "@/lib/db"
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -13,7 +13,7 @@ export async function GET(
         { status: 403 }
       )
     }
-    const { id } = params
+    const { id } = await params
     // Buscar perfil do terapeuta
     const therapistProfile = await prisma.therapistProfile.findUnique({
       where: {
@@ -70,6 +70,16 @@ export async function GET(
                 participants: true,
               },
             },
+            therapist: {
+              select: {
+                user: {
+                  select: {
+                    name: true,
+                    image: true,
+                  }
+                }
+              }
+            }
           },
         },
       },
@@ -91,8 +101,8 @@ export async function GET(
         status: session.status,
         category: session.category,
         therapist: {
-          name: session.therapist.name || "Terapeuta",
-          image: session.therapist.image,
+          name: session.therapist.user.name || "Terapeuta",
+          image: session.therapist.user.image,
         },
         participants: session.participants.map(p => ({
           id: p.user.id,

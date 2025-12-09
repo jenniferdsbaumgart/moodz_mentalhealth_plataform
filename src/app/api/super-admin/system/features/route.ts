@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     // Log the action
     await db.systemLog.create({
       data: {
-        level: "INFO",
+        level: "info",
         source: "api",
         message: `Feature flag "${data.name}" created`,
         metadata: {
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     return NextResponse.json(flag)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     console.error("Error creating feature flag:", error)
     return NextResponse.json(

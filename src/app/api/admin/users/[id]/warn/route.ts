@@ -9,7 +9,7 @@ import { NotificationType } from "@prisma/client"
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -24,7 +24,7 @@ export async function POST(
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const userId = params.id
+    const { id: userId } = await params
     const body = await request.json()
     const { reason, message, reportId } = body
     if (!reason) {
@@ -53,16 +53,16 @@ export async function POST(
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        action: "WARN",
-        entityType: "USER",
+        action: "USER_UPDATED",
+        entity: "USER",
         entityId: userId,
-        details: JSON.stringify({
+        details: {
           reason,
           message,
           reportId,
           userName: user.name,
           userEmail: user.email
-        })
+        }
       }
     })
     // If this is related to a report, update the report
@@ -78,8 +78,8 @@ export async function POST(
     // Get warning count for this user
     const warningCount = await db.auditLog.count({
       where: {
-        action: "WARN",
-        entityType: "USER",
+        action: "USER_UPDATED",
+        entity: "USER",
         entityId: userId
       }
     })
@@ -102,7 +102,7 @@ export async function POST(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -116,11 +116,11 @@ export async function GET(
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const userId = params.id
+    const { id: userId } = await params
     const warnings = await db.auditLog.findMany({
       where: {
-        action: "WARN",
-        entityType: "USER",
+        action: "USER_UPDATED",
+        entity: "USER",
         entityId: userId
       },
       select: {
@@ -136,7 +136,7 @@ export async function GET(
     return NextResponse.json({
       warnings: warnings.map(w => ({
         id: w.id,
-        ...JSON.parse(w.details || "{}"),
+        ...(w.details as object || {}),
         moderator: w.user.name,
         createdAt: w.createdAt
       })),

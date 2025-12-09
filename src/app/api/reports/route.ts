@@ -103,9 +103,9 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error("Error creating report:", error)
-    if (error.name === "ZodError") {
+    if ((error as any).name === "ZodError") {
       return NextResponse.json(
-        { error: "Dados inválidos", details: error.errors },
+        { error: "Dados inválidos", details: (error as any).errors },
         { status: 400 }
       )
     }

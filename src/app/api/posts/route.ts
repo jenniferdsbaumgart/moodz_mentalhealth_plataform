@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build order by
-    let orderBy: Prisma.PostOrderByWithRelationInput = { createdAt: "desc" }
+    let orderBy: any = { createdAt: "desc" }
 
     switch (validatedFilters.sortBy) {
       case "newest":
@@ -190,7 +190,10 @@ export async function POST(request: NextRequest) {
       userId: session.user.id,
     })
     if (!allowed) {
-      return rateLimitResponse
+      return rateLimitResponse || NextResponse.json(
+        { error: "Limite de requisições atingido. Tente novamente mais tarde." },
+        { status: 429 }
+      )
     }
 
     const body = await request.json()
@@ -206,10 +209,10 @@ export async function POST(request: NextRequest) {
         authorId: session.user.id,
         tags: validatedData.tagIds
           ? {
-              create: validatedData.tagIds.map(tagId => ({
-                tagId,
-              })),
-            }
+            create: validatedData.tagIds.map(tagId => ({
+              tagId,
+            })),
+          }
           : undefined,
       },
       include: {
@@ -256,9 +259,9 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error("Error creating post:", error)
-    if (error.name === "ZodError") {
+    if ((error as any).name === "ZodError") {
       return NextResponse.json(
-        { error: "Dados inválidos", details: error.errors },
+        { error: "Dados inválidos", details: (error as any).errors },
         { status: 400 }
       )
     }

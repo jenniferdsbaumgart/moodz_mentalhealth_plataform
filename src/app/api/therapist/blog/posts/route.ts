@@ -182,8 +182,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(post, { status: 201 })
   } catch (error) {
-    if (error.name === "ZodError") {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+    if ((error as any).name === "ZodError") {
+      return NextResponse.json({ error: (error as any).issues }, { status: 400 })
     }
 
     console.error("Erro ao criar post:", error)

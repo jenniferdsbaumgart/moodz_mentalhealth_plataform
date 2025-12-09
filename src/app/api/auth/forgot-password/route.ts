@@ -9,8 +9,10 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limiting using centralized system
     const { allowed, response: rateLimitResponse } = await rateLimit(request)
-    if (!allowed) {
+    if (!allowed && rateLimitResponse) {
       return rateLimitResponse
+    } else if (!allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
 
     const { email } = await request.json()
@@ -40,8 +42,8 @@ export async function POST(request: NextRequest) {
 
     // Deletar tokens anteriores de reset do usuário
     await db.verificationToken.deleteMany({
-      where: { 
-        identifier: `reset:${email}` 
+      where: {
+        identifier: `reset:${email}`
       }
     })
 

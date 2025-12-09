@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth"
 import { db as prisma } from "@/lib/db"
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -13,7 +13,7 @@ export async function GET(
         { status: 403 }
       )
     }
-    const { id } = params
+    const { id } = await params
     // Buscar perfil do terapeuta
     const therapistProfile = await prisma.therapistProfile.findUnique({
       where: {
@@ -51,6 +51,7 @@ export async function GET(
       },
       include: {
         profile: true,
+        preferences: true,
         patientProfile: {
           include: {
             moodEntries: {
@@ -137,8 +138,8 @@ export async function GET(
       lastSessionDate: lastSession?.session.scheduledAt || null,
       // Preferências
       preferredCategories: patient.patientProfile?.preferredCategories || [],
-      emailNotifications: patient.patientProfile?.preferences?.emailNotifications ?? true,
-      sessionReminders: patient.patientProfile?.preferences?.sessionReminders ?? true,
+      emailNotifications: patient.preferences?.emailNotifications ?? true,
+      sessionReminders: patient.preferences?.sessionReminders ?? true,
       // Status
       isActive: daysSinceLastSession !== null && daysSinceLastSession <= 30,
     }

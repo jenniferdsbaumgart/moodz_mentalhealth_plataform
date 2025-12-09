@@ -4,7 +4,7 @@ import { db } from "@/lib/db"
 import { ApiResponse } from "@/types/user"
 
 interface RouteParams {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -18,9 +18,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    const { id } = await params
+
     // Verificar se sessao existe e status SCHEDULED
     const sessionData = await db.groupSession.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: { participants: true }
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const existingEnrollment = await db.sessionParticipant.findUnique({
       where: {
         sessionId_userId: {
-          sessionId: params.id,
+          sessionId: id,
           userId: session.user.id,
         }
       }
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Criar SessionParticipant
     const participant = await db.sessionParticipant.create({
       data: {
-        sessionId: params.id,
+        sessionId: id,
         userId: session.user.id,
         status: "REGISTERED",
       },

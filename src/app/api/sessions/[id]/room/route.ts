@@ -5,7 +5,7 @@ import { createDailyRoom } from "@/lib/daily-server"
 import { ApiResponse } from "@/types/user"
 
 interface RouteParams {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -19,9 +19,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    const { id } = await params
+
     // Verificar se sessao existe
     const sessionData = await db.groupSession.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!sessionData) {
@@ -60,11 +62,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Criar sala no Daily.co
-    const roomData = await createDailyRoom(params.id)
+    const roomData = await createDailyRoom(id)
 
     // Atualizar sessao no banco
     const updatedSession = await db.groupSession.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         roomName: roomData.roomName,
         roomUrl: roomData.roomUrl,

@@ -7,7 +7,7 @@ import { db } from "@/lib/db"
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -21,7 +21,7 @@ export async function POST(
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const reportId = params.id
+    const { id: reportId } = await params
     const body = await request.json()
     const { action, note } = body
     // Validate action
@@ -39,21 +39,23 @@ export async function POST(
       where: { id: reportId },
       data: {
         status: newStatus,
-        resolvedAt: new Date()
+        resolvedAt: new Date(),
+        resolvedBy: session.user.id
       }
     })
     // Log the action
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        action: action === "dismiss" ? "DISMISS_REPORT" : "RESOLVE_REPORT",
-        entityType: "REPORT",
+        action: "REPORT_RESOLVED",
+        entity: "REPORT",
         entityId: reportId,
-        details: JSON.stringify({
+        details: {
           action,
           note,
+          originalAction: action === "dismiss" ? "DISMISS" : "RESOLVE",
           previousStatus: report.status
-        })
+        }
       }
     })
     return NextResponse.json({ success: true, report })

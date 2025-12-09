@@ -5,7 +5,7 @@ import { updateCommentSchema } from "@/lib/validations/community"
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -18,10 +18,11 @@ export async function PATCH(
 
     const body = await request.json()
     const validatedData = updateCommentSchema.parse(body)
+    const { id } = await params
 
     // Verify comment exists and user is author
     const comment = await prisma.comment.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { authorId: true, postId: true },
     })
 
@@ -41,7 +42,7 @@ export async function PATCH(
 
     // Update comment
     const updatedComment = await prisma.comment.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         content: validatedData.content,
         isEdited: true,
@@ -66,7 +67,7 @@ export async function PATCH(
     })
 
     return NextResponse.json({ data: updatedComment })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating comment:", error)
     if (error.name === "ZodError") {
       return NextResponse.json(
@@ -83,7 +84,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -94,9 +95,11 @@ export async function DELETE(
       )
     }
 
+    const { id } = await params
+
     // Verify comment exists and user is author
     const comment = await prisma.comment.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { authorId: true, postId: true },
     })
 
@@ -125,7 +128,7 @@ export async function DELETE(
 
     // Delete comment (cascade will handle replies)
     await prisma.comment.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ message: "Comentário deletado com sucesso" })

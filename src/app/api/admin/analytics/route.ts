@@ -117,10 +117,10 @@ export async function GET(request: NextRequest) {
       db.journalEntry.count({ where: { createdAt: { gte: startDate } } }),
       db.exerciseCompletion.count({ where: { completedAt: { gte: startDate } } }),
       // Gamification stats
-      db.userBadge.count({ where: { earnedAt: { gte: startDate } } }),
+      db.userBadge.count({ where: { unlockedAt: { gte: startDate } } }),
       db.pointTransaction.aggregate({
         where: { createdAt: { gte: startDate } },
-        _sum: { points: true }
+        _sum: { amount: true }
       }),
       db.dailyCheckIn.count({
         where: {
@@ -158,8 +158,8 @@ export async function GET(request: NextRequest) {
       `
     ])
     // Calculate derived metrics
-    const avgParticipation = totalSessions > 0 
-      ? Math.round((sessionParticipants / totalSessions) * 10) / 10 
+    const avgParticipation = totalSessions > 0
+      ? Math.round((sessionParticipants / totalSessions) * 10) / 10
       : 0
     const noShowRate = completedSessions > 0
       ? Math.round(((totalSessions - completedSessions - cancelledSessions) / totalSessions) * 100)
@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
         exercisesCompleted,
         // Gamification
         badgesUnlocked,
-        totalPointsDistributed: totalPoints._sum.points || 0,
+        totalPointsDistributed: totalPoints._sum.amount || 0,
         activeStreaks
       },
       charts: {

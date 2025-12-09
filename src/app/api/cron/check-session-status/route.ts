@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         if (session.participants.length > 0) {
           await db.groupSession.update({
             where: { id: session.id },
-            data: { status: "IN_PROGRESS" }
+            data: { status: "LIVE" }
           })
           results.startedSessions++
         }
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     // 2. Mark sessions as NO_SHOW if no one joined after 30 minutes past scheduled time
     try {
       const noShowThreshold = new Date(now.getTime() - 30 * 60 * 1000) // 30 minutes ago
-      
+
       const noShowSessions = await db.groupSession.findMany({
         where: {
           status: "SCHEDULED",
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
         if (session.participants.length === 0) {
           await db.groupSession.update({
             where: { id: session.id },
-            data: { status: "NO_SHOW" }
+            data: { status: "CANCELLED" }
           })
           results.noShowSessions++
         }
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     try {
       const sessionsInProgress = await db.groupSession.findMany({
         where: {
-          status: "IN_PROGRESS"
+          status: "LIVE"
         },
         select: {
           id: true,
@@ -109,16 +109,15 @@ export async function GET(request: NextRequest) {
 
       for (const session of sessionsInProgress) {
         const sessionEnd = new Date(
-          session.scheduledAt.getTime() + 
+          session.scheduledAt.getTime() +
           (session.duration + 15) * 60 * 1000 // duration + 15 min buffer
         )
 
         if (now > sessionEnd) {
           await db.groupSession.update({
             where: { id: session.id },
-            data: { 
-              status: "COMPLETED",
-              endedAt: new Date(session.scheduledAt.getTime() + session.duration * 60 * 1000)
+            data: {
+              status: "COMPLETED"
             }
           })
           results.completedSessions++
@@ -131,7 +130,7 @@ export async function GET(request: NextRequest) {
     // 4. Clean up very old scheduled sessions (more than 24 hours past scheduled time)
     try {
       const oldThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-      
+
       await db.groupSession.updateMany({
         where: {
           status: "SCHEDULED",

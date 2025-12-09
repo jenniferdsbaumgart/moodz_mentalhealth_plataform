@@ -14,7 +14,7 @@ let mockPatientNotes: Array<{
 // GET - Listar notas do paciente
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -24,7 +24,7 @@ export async function GET(
         { status: 403 }
       )
     }
-    const { id } = params
+    const { id } = await params
     // Buscar perfil do terapeuta
     const therapistProfile = await prisma.therapistProfile.findUnique({
       where: {
@@ -74,7 +74,7 @@ export async function GET(
 // POST - Criar nova nota
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -84,7 +84,7 @@ export async function POST(
         { status: 403 }
       )
     }
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     const { content, isPrivate } = body
     if (!content || content.trim().length === 0) {

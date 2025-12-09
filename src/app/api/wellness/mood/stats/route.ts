@@ -51,17 +51,17 @@ export async function GET() {
 
     const averageEnergy = totalEntries > 0
       ? Math.round((moodEntries.filter(e => e.energy).reduce((sum, entry) => sum + entry.energy!, 0) /
-          moodEntries.filter(e => e.energy).length) * 10) / 10
+        moodEntries.filter(e => e.energy).length) * 10) / 10
       : 0
 
     const averageAnxiety = totalEntries > 0
       ? Math.round((moodEntries.filter(e => e.anxiety).reduce((sum, entry) => sum + entry.anxiety!, 0) /
-          moodEntries.filter(e => e.anxiety).length) * 10) / 10
+        moodEntries.filter(e => e.anxiety).length) * 10) / 10
       : 0
 
     const averageSleep = totalEntries > 0
       ? Math.round((moodEntries.filter(e => e.sleep).reduce((sum, entry) => sum + entry.sleep!, 0) /
-          moodEntries.filter(e => e.sleep).length) * 10) / 10
+        moodEntries.filter(e => e.sleep).length) * 10) / 10
       : 0
 
     // Calculate current streak
@@ -75,7 +75,7 @@ export async function GET() {
     }, {} as Record<string, number>)
 
     const mostCommonEmotions = Object.entries(emotionCounts)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([emotion, count]) => ({ emotion, count, percentage: Math.round((count / allEmotions.length) * 100) }))
 
@@ -87,12 +87,18 @@ export async function GET() {
     }, {} as Record<string, number>)
 
     const mostCommonActivities = Object.entries(activityCounts)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([activity, count]) => ({ activity, count, percentage: Math.round((count / allActivities.length) * 100) }))
 
     // Generate insights
-    const insights = generateInsights(moodEntries, mostCommonActivities)
+    const mappedEntries = moodEntries.map(e => ({
+      ...e,
+      energy: e.energy ?? undefined,
+      anxiety: e.anxiety ?? undefined,
+      sleep: e.sleep ?? undefined
+    }))
+    const insights = generateInsights(mappedEntries, mostCommonActivities)
 
     // Prepare chart data (last 30 days)
     const chartData = eachDayOfInterval({ start: thirtyDaysAgo, end: now })
@@ -155,7 +161,7 @@ export async function GET() {
 async function calculateCurrentStreak(patientId: string): Promise<number> {
   const now = new Date()
   let streak = 0
-    const checkDate = new Date(now)
+  const checkDate = new Date(now)
 
   // Check consecutive days backwards from today
   while (streak < 365) { // Prevent infinite loop

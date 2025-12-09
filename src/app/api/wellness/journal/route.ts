@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { Prisma } from "@prisma/client"
 import { createJournalSchema } from "@/lib/validations/journal"
 import { GamificationService } from "@/lib/gamification"
 
@@ -39,11 +40,11 @@ export async function GET(request: NextRequest) {
     // Build where clause
     const where: {
       patientId: string
-      title?: { contains: string; mode: string }
-      content?: { contains: string; mode: string }
+      title?: { contains: string; mode: Prisma.QueryMode }
+      content?: { contains: string; mode: Prisma.QueryMode }
       OR?: Array<{
-        title?: { contains: string; mode: string }
-        content?: { contains: string; mode: string }
+        title?: { contains: string; mode: Prisma.QueryMode }
+        content?: { contains: string; mode: Prisma.QueryMode }
       }>
       tags?: { has: string }
       isFavorite?: boolean
@@ -162,9 +163,9 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error("Error creating journal entry:", error)
-    if (error.name === "ZodError") {
+    if ((error as any).name === "ZodError") {
       return NextResponse.json(
-        { error: "Dados inválidos", details: error.errors },
+        { error: "Dados inválidos", details: (error as any).issues },
         { status: 400 }
       )
     }

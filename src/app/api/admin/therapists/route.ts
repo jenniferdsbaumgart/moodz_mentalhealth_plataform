@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status")
 
   const therapists = await db.therapistProfile.findMany({
-    where: status === "pending" ? { verified: false } : undefined,
+    where: status === "pending" ? { isVerified: false } : undefined,
     include: {
       user: {
         include: { profile: true }

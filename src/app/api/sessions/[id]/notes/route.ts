@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db"
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -15,7 +15,7 @@ export async function GET(
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Verify session exists and user is the therapist
     const groupSession = await prisma.groupSession.findUnique({
@@ -56,7 +56,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -67,7 +67,7 @@ export async function POST(
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const { content, isPrivate } = await request.json()
 
     // Validate input
@@ -121,7 +121,7 @@ export async function POST(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -132,7 +132,7 @@ export async function PATCH(
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const { content, isPrivate } = await request.json()
 
     // Validate input

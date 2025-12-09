@@ -6,14 +6,14 @@ import { createAuditLog } from "@/lib/audit/service"
 // POST - Rebaixar admin para paciente
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
   if (session?.user?.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
   }
 
-  const { id } = params
+  const { id } = await params
 
   if (id === session.user.id) {
     return NextResponse.json(

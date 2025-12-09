@@ -4,13 +4,14 @@ import { NextRequest, NextResponse } from "next/server"
 // GET /api/blog/posts/[slug] - Buscar post por slug
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const { slug } = await params
     // Buscar post publicado por slug
     const post = await db.blogPost.findFirst({
       where: {
-        slug: params.slug,
+        slug,
         status: "PUBLISHED",
         publishedAt: { not: null },
       },

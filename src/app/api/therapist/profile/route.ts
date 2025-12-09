@@ -118,7 +118,7 @@ export async function PATCH(request: NextRequest) {
         {
           success: false,
           message: "Dados inválidos",
-          errors: error.errors,
+          errors: error.issues,
         },
         { status: 400 }
       )
@@ -158,6 +158,11 @@ export async function POST(request: NextRequest) {
       data: {
         userId: session.user.id,
         ...validatedData,
+        crp: validatedData.crp || "",
+        bio: validatedData.bio || "",
+        specialties: validatedData.specialties || [],
+        specializations: validatedData.specializations || [],
+        languages: validatedData.languages || [],
       },
     })
     return NextResponse.json({
@@ -172,7 +177,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message: "Dados inválidos",
-          errors: error.errors,
+          errors: error.issues,
         },
         { status: 400 }
       )

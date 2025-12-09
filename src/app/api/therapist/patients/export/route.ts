@@ -34,7 +34,7 @@ export async function GET() {
     if (!patientMap.has(userId)) {
       patientMap.set(userId, {
         id: userId,
-        name: p.user.profile?.name || p.user.name,
+        name: p.user.name || "Sem nome",
         email: p.user.email,
         phone: p.user.profile?.phone || "",
         birthDate: p.user.profile?.birthDate ? format(new Date(p.user.profile.birthDate), "dd/MM/yyyy") : "",

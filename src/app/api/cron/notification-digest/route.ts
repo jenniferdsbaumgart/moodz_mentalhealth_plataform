@@ -54,8 +54,7 @@ export async function GET(request: NextRequest) {
     const users = await db.user.findMany({
       where: {
         notificationDigest: digestFilter,
-        status: "ACTIVE",
-        email: { not: null }
+        status: "ACTIVE"
       },
       include: {
         notifications: {

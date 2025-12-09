@@ -55,13 +55,13 @@ export async function GET(request: NextRequest) {
               { title: { contains: searchTerm, mode: "insensitive" } },
               { content: { contains: searchTerm, mode: "insensitive" } },
             ],
-            isPublished: true,
+            // isPublished: true,
           },
           select: {
             id: true,
             title: true,
             content: true,
-            category: { select: { name: true } },
+            category: true,
           },
           take: perTypeLimit,
           orderBy: { createdAt: "desc" },
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
             id: post.id,
             type: "post",
             title: post.title,
-            description: `${post.category?.name || "Comunidade"} • ${post.content.slice(0, 80)}...`,
+            description: `${post.category || "Comunidade"} • ${post.content.slice(0, 80)}...`,
             url: `/community/posts/${post.id}`,
             relevance: calculateRelevance(post.title, post.content),
           })
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
               { title: { contains: searchTerm, mode: "insensitive" } },
               { content: { contains: searchTerm, mode: "insensitive" } },
             ],
-            published: true,
+            publishedAt: { not: null },
           },
           select: {
             id: true,

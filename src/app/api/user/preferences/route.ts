@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message: "Dados inválidos",
-          error: validationResult.error.issues,
+          error: validationResult.error.issues.map(i => i.message).join(", "),
         } as ApiResponse,
         { status: 400 }
       )
@@ -129,7 +129,7 @@ export async function PATCH(request: NextRequest) {
         {
           success: false,
           message: "Dados inválidos",
-          error: validationResult.error.issues,
+          error: validationResult.error.issues.map(i => i.message).join(", "),
         } as ApiResponse,
         { status: 400 }
       )

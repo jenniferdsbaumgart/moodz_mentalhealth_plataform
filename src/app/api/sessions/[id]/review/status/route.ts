@@ -4,7 +4,7 @@ import { db as prisma } from "@/lib/db"
 // GET - Verificar status da avaliação do usuário para uma sessão
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -14,7 +14,7 @@ export async function GET(
         { status: 401 }
       )
     }
-    const { id } = params
+    const { id } = await params
     // Importar mock storage (em produção seria do banco)
     const { mockReviews } = require("../route")
     // Verificar se já existe uma avaliação

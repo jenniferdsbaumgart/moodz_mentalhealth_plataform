@@ -3,13 +3,14 @@ import { db } from "@/lib/db"
 import { ApiResponse } from "@/types/user"
 
 interface RouteParams {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params
     const session = await db.groupSession.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         therapist: {
           include: {

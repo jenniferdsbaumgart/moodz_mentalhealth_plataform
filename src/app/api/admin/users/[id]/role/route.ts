@@ -9,7 +9,7 @@ import { NotificationType } from "@prisma/client"
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -24,7 +24,7 @@ export async function PATCH(
     if (admin?.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const userId = params.id
+    const { id: userId } = await params
     const body = await request.json()
     const { role, reason } = body
     // Validate role
@@ -71,9 +71,11 @@ export async function PATCH(
         await db.therapistProfile.create({
           data: {
             userId: userId,
-            specialization: "Geral",
+            crp: `PENDING-${userId.substring(0, 8)}`, // Temporary CRP
+            specialties: [],
+            specializations: ["Geral"],
             bio: "",
-            verified: false
+            isVerified: false
           }
         })
       }
@@ -82,14 +84,14 @@ export async function PATCH(
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        action: "CHANGE_ROLE",
-        entityType: "USER",
+        action: "ROLE_CHANGED",
+        entity: "USER",
         entityId: userId,
-        details: JSON.stringify({
+        details: {
           previousRole,
           newRole: role,
           reason: reason || null
-        })
+        }
       }
     })
     // Notify user about role change

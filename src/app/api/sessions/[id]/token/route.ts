@@ -5,7 +5,7 @@ import { createMeetingToken } from "@/lib/daily-server"
 import { ApiResponse } from "@/types/user"
 
 interface RouteParams {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -19,9 +19,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    const { id } = await params
+
     // Verificar se sessao existe e esta ativa
     const sessionData = await db.groupSession.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!sessionData) {
@@ -70,7 +72,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       const enrollment = await db.sessionParticipant.findUnique({
         where: {
           sessionId_userId: {
-            sessionId: params.id,
+            sessionId: id,
             userId: session.user.id,
           }
         }

@@ -8,11 +8,13 @@ import { HOUR } from "@/lib/rate-limit/config"
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
     const userId = session?.user?.id
+
+    const { id } = await params
 
     const { searchParams } = new URL(request.url)
     const parentId = searchParams.get("parentId")
@@ -22,7 +24,7 @@ export async function GET(
       postId: string
       parentId?: string | null
     } = {
-      postId: params.id,
+      postId: id,
     }
 
     if (parentId) {
@@ -123,7 +125,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -133,6 +135,8 @@ export async function POST(
         { status: 401 }
       )
     }
+
+    const { id } = await params
 
     // Rate limiting for comment creation
     const { allowed, response: rateLimitResponse } = await rateLimit(request, {
@@ -145,7 +149,10 @@ export async function POST(
       },
     })
     if (!allowed) {
-      return rateLimitResponse
+      return rateLimitResponse || NextResponse.json(
+        { error: "Limite de comentários atingido. Tente novamente em 1 hora." },
+        { status: 429 }
+      )
     }
 
     const body = await request.json()
@@ -153,7 +160,7 @@ export async function POST(
 
     // Verify post exists and is not locked
     const post = await prisma.post.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { isLocked: true, authorId: true },
     })
 
@@ -178,7 +185,7 @@ export async function POST(
         select: { postId: true, parentId: true },
       })
 
-      if (!parentComment || parentComment.postId !== params.id) {
+      if (!parentComment || parentComment.postId !== id) {
         return NextResponse.json(
           { error: "Comentário pai inválido" },
           { status: 400 }
@@ -198,7 +205,7 @@ export async function POST(
     const comment = await prisma.comment.create({
       data: {
         content: validatedData.content,
-        postId: params.id,
+        postId: id,
         authorId: session.user.id,
         parentId: validatedData.parentId || null,
         isAnonymous: validatedData.isAnonymous,
@@ -224,14 +231,14 @@ export async function POST(
     // Notify post author about new reply (non-blocking)
     // Only notify if commenter is not the post author
     if (post.authorId !== session.user.id) {
-      notifyNewReply(params.id, comment.id).catch(console.error)
+      notifyNewReply(id, comment.id).catch(console.error)
     }
 
     return NextResponse.json(
       { data: { ...comment, userVote: null } },
       { status: 201 }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating comment:", error)
     if (error.name === "ZodError") {
       return NextResponse.json(

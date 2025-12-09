@@ -7,7 +7,7 @@ import { db } from "@/lib/db"
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -21,7 +21,7 @@ export async function DELETE(
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const commentId = params.id
+    const { id: commentId } = await params
     // Get comment info before deletion for logging
     const comment = await db.comment.findUnique({
       where: { id: commentId },
@@ -45,17 +45,17 @@ export async function DELETE(
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        action: "DELETE_COMMENT",
-        entityType: "COMMENT",
+        action: "COMMENT_DELETED",
+        entity: "COMMENT",
         entityId: commentId,
-        details: JSON.stringify({
+        details: {
           commentContent: comment.content.slice(0, 100),
           postId: comment.postId,
           postTitle: comment.post.title,
           authorId: comment.authorId,
           authorName: comment.author.name,
           authorEmail: comment.author.email
-        })
+        }
       }
     })
     return NextResponse.json({ success: true })
@@ -73,7 +73,7 @@ export async function DELETE(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -87,8 +87,9 @@ export async function GET(
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
+    const { id } = await params
     const comment = await db.comment.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         author: {
           select: {

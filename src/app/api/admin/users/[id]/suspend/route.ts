@@ -9,7 +9,7 @@ import { NotificationType } from "@prisma/client"
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -24,7 +24,7 @@ export async function POST(
     if (admin?.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const userId = params.id
+    const { id: userId } = await params
     const body = await request.json()
     const { type, duration, reason } = body
     // Validate type
@@ -99,16 +99,15 @@ export async function POST(
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        action: type.toUpperCase(),
-        entityType: "USER",
+        action: type === "suspend" ? "USER_UPDATED" : (type === "ban" ? "USER_BANNED" : "USER_UNBANNED"),
+        entity: "USER",
         entityId: userId,
-        details: JSON.stringify({
-          previousStatus: currentUser.status,
-          newStatus,
-          suspendUntil,
-          reason: reason || null,
-          duration: type === "suspend" ? duration : null
-        })
+        details: {
+          type,
+          duration,
+          reason,
+          suspendUntil: suspendUntil ? suspendUntil.toISOString() : null
+        }
       }
     })
     // Notify user
@@ -139,7 +138,7 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Redirect to POST with type=unban
   const newRequest = new Request(request.url, {

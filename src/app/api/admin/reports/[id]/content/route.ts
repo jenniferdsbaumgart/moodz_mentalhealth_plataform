@@ -1,46 +1,54 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+
 /**
  * GET /api/admin/reports/[id]/content
  * Get full content details for a report including context
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+
     const admin = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
+
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const reportId = params.id
-    // Get the report
+
+    const { id: reportId } = await params
+
+    // Get the report to know what content to fetch
     const report = await db.report.findUnique({
       where: { id: reportId },
       select: {
-        contentType: true,
-        contentId: true
+        postId: true,
+        commentId: true
       }
     })
+
     if (!report) {
       return NextResponse.json({ error: "Report not found" }, { status: 404 })
     }
+
     let content = null
     let parentPost = null
     let relatedComments: any[] = []
     let otherReports: any[] = []
-    if (report.contentType === "POST") {
+
+    if (report.postId) {
       // Get post with comments
-      content = await db.post.findUnique({
-        where: { id: report.contentId },
+      const post = await db.post.findUnique({
+        where: { id: report.postId },
         select: {
           id: true,
           title: true,
@@ -73,13 +81,15 @@ export async function GET(
           }
         }
       })
-      if (content) {
-        relatedComments = content.comments
+
+      if (post) {
+        content = post
+        relatedComments = post.comments
       }
-    } else if (report.contentType === "COMMENT") {
+    } else if (report.commentId) {
       // Get comment with parent post
       const comment = await db.comment.findUnique({
-        where: { id: report.contentId },
+        where: { id: report.commentId },
         select: {
           id: true,
           content: true,
@@ -126,40 +136,51 @@ export async function GET(
           }
         }
       })
+
       if (comment) {
         content = {
           id: comment.id,
           content: comment.content,
           createdAt: comment.createdAt,
-          author: comment.author
+          author: comment.author,
+          type: "COMMENT"
         }
         parentPost = comment.post
         relatedComments = comment.post?.comments || []
       }
     }
+
     // Get other reports on the same content
-    otherReports = await db.report.findMany({
-      where: {
-        contentId: report.contentId,
-        id: { not: reportId }
-      },
-      select: {
-        id: true,
-        reason: true,
-        status: true,
-        createdAt: true
-      },
-      orderBy: { createdAt: "desc" },
-      take: 5
-    })
+    const whereClause = report.postId
+      ? { postId: report.postId }
+      : (report.commentId ? { commentId: report.commentId } : null)
+
+    if (whereClause) {
+      otherReports = await db.report.findMany({
+        where: {
+          ...whereClause,
+          id: { not: reportId }
+        },
+        select: {
+          id: true,
+          reason: true,
+          status: true,
+          createdAt: true
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5
+      })
+    }
+
     return NextResponse.json({
-      content: content?.content,
+      content: content,
       context: {
         parentPost,
         relatedComments
       },
       otherReports
     })
+
   } catch (error) {
     console.error("Error fetching report content:", error)
     return NextResponse.json(

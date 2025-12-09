@@ -7,7 +7,7 @@ import { db } from "@/lib/db"
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { metric: string } }
+  { params }: { params: Promise<{ metric: string }> }
 ) {
   try {
     const session = await auth()
@@ -24,7 +24,7 @@ export async function GET(
     }
     const { searchParams } = new URL(request.url)
     const period = searchParams.get("period") || "30d"
-    const metric = params.metric
+    const { metric } = await params
     // Calculate date range
     const now = new Date()
     let startDate: Date
@@ -77,7 +77,7 @@ export async function GET(
       generatedAt: now.toISOString()
     })
   } catch (error) {
-    console.error(`Error fetching ${params.metric} analytics:`, error)
+    console.error("Error fetching analytics:", error)
     return NextResponse.json(
       { error: "Failed to fetch analytics" },
       { status: 500 }
@@ -188,9 +188,9 @@ async function getSessionsMetrics(startDate: Date, endDate: Date) {
       select: {
         id: true,
         user: { select: { name: true, email: true } },
-        _count: { select: { sessions: true } }
+        _count: { select: { groupSessions: true } }
       },
-      orderBy: { sessions: { _count: "desc" } },
+      orderBy: { groupSessions: { _count: "desc" } },
       take: 10
     })
   ])
@@ -211,7 +211,7 @@ async function getSessionsMetrics(startDate: Date, endDate: Date) {
       id: t.id,
       name: t.user.name,
       email: t.user.email,
-      sessionsCount: t._count.sessions
+      sessionsCount: t._count.groupSessions
     }))
   }
 }
@@ -322,15 +322,15 @@ async function getGamificationMetrics(startDate: Date, endDate: Date) {
     topBadges,
     leaderboard
   ] = await Promise.all([
-    db.userBadge.count({ where: { earnedAt: { gte: startDate } } }),
+    db.userBadge.count({ where: { unlockedAt: { gte: startDate } } }),
     db.pointTransaction.aggregate({
       where: { createdAt: { gte: startDate } },
-      _sum: { points: true }
+      _sum: { amount: true }
     }),
     db.pointTransaction.groupBy({
       by: ["type"],
       where: { createdAt: { gte: startDate } },
-      _sum: { points: true },
+      _sum: { amount: true },
       _count: { id: true }
     }),
     db.dailyCheckIn.count({
@@ -340,7 +340,7 @@ async function getGamificationMetrics(startDate: Date, endDate: Date) {
     }),
     db.userBadge.groupBy({
       by: ["badgeId"],
-      where: { earnedAt: { gte: startDate } },
+      where: { unlockedAt: { gte: startDate } },
       _count: { id: true },
       orderBy: { _count: { id: "desc" } },
       take: 10
@@ -357,10 +357,10 @@ async function getGamificationMetrics(startDate: Date, endDate: Date) {
   ])
   return {
     badgesEarned,
-    totalPoints: totalPoints._sum.points || 0,
+    totalPoints: totalPoints._sum.amount || 0,
     pointsByType: pointsByType.map(p => ({
       type: p.type,
-      total: p._sum.points || 0,
+      total: p._sum.amount || 0,
       count: p._count.id
     })),
     streaksActive,
@@ -384,38 +384,31 @@ async function getMoodMetrics(startDate: Date, endDate: Date) {
     db.userMoodLog.count({ where: { createdAt: { gte: startDate } } }),
     db.userMoodLog.aggregate({
       where: { createdAt: { gte: startDate } },
-      _avg: { moodScore: true }
+      _avg: { mood: true }
     }),
     db.userMoodLog.groupBy({
-      by: ["moodScore"],
+      by: ["mood"],
       where: { createdAt: { gte: startDate } },
       _count: { id: true }
     }),
     db.$queryRaw`
       SELECT DATE(created_at) as date, 
-             AVG(mood_score) as avg_mood,
-             MIN(mood_score) as min_mood,
-             MAX(mood_score) as max_mood,
+             AVG(mood) as avg_mood,
+             MIN(mood) as min_mood,
+             MAX(mood) as max_mood,
              COUNT(*) as count
       FROM "UserMoodLog"
       WHERE created_at >= ${startDate}
       GROUP BY DATE(created_at)
       ORDER BY date ASC
     `,
-    db.$queryRaw`
-      SELECT factors, COUNT(*) as count
-      FROM "UserMoodLog"
-      WHERE created_at >= ${startDate} AND factors IS NOT NULL
-      GROUP BY factors
-      ORDER BY count DESC
-      LIMIT 10
-    `
+    Promise.resolve([]) // topFactors not supported in current schema
   ])
   return {
     totalEntries,
-    avgMood: avgMood._avg.moodScore || 0,
+    avgMood: avgMood._avg.mood || 0,
     moodDistribution: moodDistribution.map(m => ({
-      score: m.moodScore,
+      score: m.mood,
       count: m._count.id
     })),
     moodOverTime,

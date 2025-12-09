@@ -10,8 +10,10 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limiting
     const { allowed, response: rateLimitResponse } = await rateLimit(request)
-    if (!allowed) {
+    if (!allowed && rateLimitResponse) {
       return rateLimitResponse
+    } else if (!allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 })
     }
     const { name, email, password } = await request.json()
 
@@ -73,8 +75,8 @@ export async function POST(request: NextRequest) {
     const { password: _, ...userWithoutPassword } = user
 
     return NextResponse.json(
-      { 
-        message: "Conta criada com sucesso! Verifique seu email para ativar sua conta.", 
+      {
+        message: "Conta criada com sucesso! Verifique seu email para ativar sua conta.",
         user: userWithoutPassword,
         requiresVerification: true,
       },

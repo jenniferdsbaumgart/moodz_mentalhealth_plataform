@@ -76,7 +76,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json(updatedSettings)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     console.error("Erro ao atualizar configurações:", error)
     return NextResponse.json(

@@ -7,7 +7,7 @@ import { db } from "@/lib/db"
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -21,20 +21,27 @@ export async function POST(
     if (!["ADMIN", "SUPER_ADMIN"].includes(admin?.role || "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
-    const reportId = params.id
-    // Update report status to IN_REVIEW
+    const { id: reportId } = await params
+    // Update report status to IN_REVIEW or REVIEWING
     const report = await db.report.update({
       where: { id: reportId },
-      data: { status: "IN_REVIEW" }
+      data: {
+        status: "REVIEWING",
+        resolvedBy: session.user.id
+      }
     })
     // Log the action
     await db.auditLog.create({
       data: {
         userId: session.user.id,
-        action: "CLAIM_REPORT",
-        entityType: "REPORT",
+        action: "REPORT_RESOLVED", // Using REPORT_RESOLVED as generic action for report updates
+        entity: "REPORT",
         entityId: reportId,
-        details: JSON.stringify({ previousStatus: "PENDING" })
+        details: {
+          previousStatus: "PENDING",
+          newStatus: "REVIEWING",
+          action: "CLAIM"
+        }
       }
     })
     return NextResponse.json({ success: true, report })

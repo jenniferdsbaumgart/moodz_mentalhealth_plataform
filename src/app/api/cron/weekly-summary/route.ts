@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     const now = new Date()
-    
+
     // Calculate week boundaries (last 7 days)
     const weekEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const weekStart = new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000)
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
           db.userBadge.count({
             where: {
               userId: user.id,
-              earnedAt: {
+              unlockedAt: {
                 gte: weekStart,
                 lt: weekEnd
               }

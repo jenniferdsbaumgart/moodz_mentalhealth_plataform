@@ -27,10 +27,9 @@ export async function POST(
   // Update therapist profile
   await db.therapistProfile.update({
     where: { id },
-    data: { 
-      isVerified: true, 
-      isApproved: true,
-      verifiedAt: new Date() 
+    data: {
+      isVerified: true,
+      verifiedAt: new Date()
     }
   })
 

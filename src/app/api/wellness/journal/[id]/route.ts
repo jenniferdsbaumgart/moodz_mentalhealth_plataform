@@ -4,9 +4,9 @@ import { prisma } from "@/lib/db"
 import { updateJournalSchema } from "@/lib/validations/journal"
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Get patient profile
     const patient = await prisma.patientProfile.findUnique({
@@ -72,7 +72,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     const validatedData = updateJournalSchema.parse(body)
 
@@ -117,7 +117,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       data: journalEntry,
       message: "Entrada do diário atualizada com sucesso!"
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating journal entry:", error)
     if (error.name === "ZodError") {
       return NextResponse.json(
@@ -142,7 +142,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Get patient profile
     const patient = await prisma.patientProfile.findUnique({

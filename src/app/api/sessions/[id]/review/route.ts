@@ -22,7 +22,7 @@ const createReviewSchema = z.object({
 // GET - Verificar se usuário já avaliou a sessão
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -32,7 +32,7 @@ export async function GET(
         { status: 401 }
       )
     }
-    const { id } = params
+    const { id } = await params
     // Verificar se a sessão existe e foi concluída
     const groupSession = await prisma.groupSession.findUnique({
       where: { id },
@@ -90,7 +90,7 @@ export async function GET(
 // POST - Criar avaliação da sessão
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userSession = await auth()
@@ -100,7 +100,7 @@ export async function POST(
         { status: 401 }
       )
     }
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     const validatedData = createReviewSchema.parse(body)
     // Verificar se a sessão existe e foi concluída
@@ -181,7 +181,7 @@ export async function POST(
         {
           success: false,
           message: "Dados inválidos",
-          errors: error.errors,
+          errors: (error as any).errors,
         },
         { status: 400 }
       )

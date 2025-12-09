@@ -4,18 +4,19 @@ import { db } from "@/lib/db"
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
   if (!session?.user || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  const { id } = await params
   const { reason } = await req.json()
 
   // Marcar como rejeitado ou deletar
   await db.therapistProfile.delete({
-    where: { id: params.id }
+    where: { id }
   })
 
   // TODO: Enviar email com motivo da rejeição

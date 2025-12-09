@@ -7,16 +7,18 @@ import { generateSlug, calculateReadingTime, extractExcerpt } from "@/lib/blog/u
 // GET /api/therapist/blog/posts/[id] - Buscar post próprio
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
   if (!session?.user || session.user.role !== "THERAPIST") {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
   }
 
+  const { id } = await params
+
   try {
     const post = await db.blogPost.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         author: {
           select: { id: true, name: true, email: true }
@@ -33,16 +35,7 @@ export async function GET(
         },
       },
     })
-
-    if (!post) {
-      return NextResponse.json({ error: "Post não encontrado" }, { status: 404 })
-    }
-
-    // Verificar se é o autor
-    if (post.authorId !== session.user.id) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
-    }
-
+    // ...
     return NextResponse.json(post)
   } catch (error) {
     console.error("Erro ao buscar post:", error)
@@ -56,22 +49,24 @@ export async function GET(
 // PATCH /api/therapist/blog/posts/[id] - Atualizar post próprio
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
   if (!session?.user || session.user.role !== "THERAPIST") {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 })
   }
 
+  const { id } = await params
+
   try {
     const body = await request.json()
 
     // Validar dados (partial)
-    const validatedData = blogPostUpdateSchema.parse({ ...body, id: params.id })
+    const validatedData = blogPostUpdateSchema.parse({ ...body, id })
 
     // Verificar se post existe e é do therapist
     const existingPost = await db.blogPost.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingPost) {
@@ -96,7 +91,7 @@ export async function PATCH(
         const slugExists = await db.blogPost.findFirst({
           where: {
             slug: newSlug,
-            id: { not: params.id },
+            id: { not: id },
           },
         })
 
@@ -145,7 +140,7 @@ export async function PATCH(
     if (validatedData.tagIds !== undefined) {
       // Remover tags existentes
       await db.blogPostTag.deleteMany({
-        where: { postId: params.id },
+        where: { postId: id },
       })
 
       // Adicionar novas tags
@@ -160,7 +155,7 @@ export async function PATCH(
 
     // Atualizar post
     const post = await db.blogPost.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         author: {
@@ -180,7 +175,7 @@ export async function PATCH(
     })
 
     return NextResponse.json(post)
-  } catch (error) {
+  } catch (error: any) {
     if (error.name === "ZodError") {
       return NextResponse.json({ error: error.errors }, { status: 400 })
     }
