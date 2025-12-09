@@ -40,7 +40,10 @@ export async function seedNotificationPreferences() {
     THERAPIST_APPROVED: { email: true, push: true, inApp: true },
     NEW_REVIEW: { email: true, push: true, inApp: true },
     SYSTEM_ANNOUNCEMENT: { email: true, push: false, inApp: true },
-    WEEKLY_SUMMARY: { email: true, push: false, inApp: true }
+    WEEKLY_SUMMARY: { email: true, push: false, inApp: true },
+    SESSION_REMINDER_THERAPIST: { email: true, push: true, inApp: true },
+    NEW_ENROLLMENT: { email: true, push: true, inApp: true },
+    PATIENT_MILESTONE: { email: true, push: true, inApp: true },
   }
 
   // Create preferences for each user

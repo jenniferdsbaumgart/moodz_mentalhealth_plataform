@@ -18,7 +18,7 @@ export interface TestUser {
  */
 export async function createTestUser(data: Partial<TestUser> = {}): Promise<TestUser> {
   const hashedPassword = await bcrypt.hash(data.password || 'test123456', 12)
-  
+
   const user = await prisma.user.create({
     data: {
       email: data.email || `test-${Date.now()}@example.com`,
@@ -44,7 +44,7 @@ export async function createTestUser(data: Partial<TestUser> = {}): Promise<Test
  */
 export async function createTestTherapist(data: Partial<TestUser> = {}) {
   const user = await createTestUser({ ...data, role: 'THERAPIST' })
-  
+
   await prisma.therapistProfile.create({
     data: {
       userId: user.id,
@@ -64,7 +64,7 @@ export async function createTestTherapist(data: Partial<TestUser> = {}) {
  */
 export async function createTestPatient(data: Partial<TestUser> = {}) {
   const user = await createTestUser({ ...data, role: 'PATIENT' })
-  
+
   await prisma.patientProfile.create({
     data: {
       userId: user.id,
@@ -129,12 +129,12 @@ export async function createTestSession(therapistId: string, data: Record<string
     data: {
       title: (data.title as string) || 'Test Session',
       description: (data.description as string) || 'Test session description',
-      category: (data.category as string) || 'ANXIETY',
+      category: (data.category || 'ANXIETY') as any,
       therapistId: therapistProfile.id,
       scheduledAt: (data.scheduledAt as Date) || new Date(Date.now() + 24 * 60 * 60 * 1000),
       duration: (data.duration as number) || 60,
       maxParticipants: (data.maxParticipants as number) || 10,
-      status: (data.status as string) || 'SCHEDULED',
+      status: (data.status || 'SCHEDULED') as any,
     },
   })
 }
