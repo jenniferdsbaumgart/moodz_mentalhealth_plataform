@@ -2,15 +2,15 @@
 
 import { useEffect } from "react"
 import { useInView } from "react-intersection-observer"
-import { CommunityFiltersInput } from "@/types/community"
+import { CommunityFilters } from "@/types/community"
 import { usePosts, useVotePost } from "@/hooks/use-posts"
 import { PostCard } from "./post-card"
 import { Button } from "@/components/ui/button"
 import { Loader2, RefreshCw } from "lucide-react"
 
 interface PostFeedProps {
-  filters: CommunityFiltersInput
-  onFiltersChange?: (filters: CommunityFiltersInput) => void
+  filters: CommunityFilters
+  onFiltersChange?: (filters: CommunityFilters) => void
 }
 
 export function PostFeed({ filters, onFiltersChange }: PostFeedProps) {
@@ -65,7 +65,7 @@ export function PostFeed({ filters, onFiltersChange }: PostFeedProps) {
     )
   }
 
-  const posts = data?.pages.flatMap(page => page.data) || []
+  const posts = data?.pages.flatMap((page: any) => page.data) || []
 
   if (posts.length === 0) {
     return (
@@ -73,12 +73,12 @@ export function PostFeed({ filters, onFiltersChange }: PostFeedProps) {
         <div className="text-muted-foreground mb-4">
           <p className="text-lg font-medium">Nenhum post encontrado</p>
           <p className="text-sm">
-            {filters.search || filters.category !== "all" || filters.tagId
+            {filters.search || filters.category || filters.tagId
               ? "Tente ajustar os filtros de busca"
               : "Seja o primeiro a criar um post na comunidade!"}
           </p>
         </div>
-        {(filters.search || filters.category !== "all" || filters.tagId) && (
+        {(filters.search || filters.category || filters.tagId) && (
           <Button
             onClick={() => onFiltersChange?.({
               ...filters,

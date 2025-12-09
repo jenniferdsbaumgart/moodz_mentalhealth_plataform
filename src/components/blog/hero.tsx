@@ -15,7 +15,7 @@ interface HeroProps {
 }
 
 export function Hero({ featuredPost }: HeroProps) {
-  const authorInitials = featuredPost.author.name
+  const authorInitials = (featuredPost.author.name || "A")
     .split(" ")
     .map((n) => n[0])
     .join("")
@@ -57,7 +57,7 @@ export function Hero({ featuredPost }: HeroProps) {
               <Avatar className="h-12 w-12">
                 <AvatarImage
                   src={featuredPost.author.image || ""}
-                  alt={featuredPost.author.name}
+                  alt={featuredPost.author.name || "Author"}
                 />
                 <AvatarFallback>
                   {authorInitials}
@@ -71,7 +71,7 @@ export function Hero({ featuredPost }: HeroProps) {
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    <span>{formatBlogDate(featuredPost.publishedAt)}</span>
+                    <span>{formatBlogDate(featuredPost.publishedAt || featuredPost.createdAt)}</span>
                   </div>
                   {featuredPost.readingTime && (
                     <div className="flex items-center gap-1">

@@ -12,7 +12,7 @@ interface AuthorCardProps {
 }
 
 export function AuthorCard({ author, publishedAt, readingTime, viewCount }: AuthorCardProps) {
-  const authorInitials = author.name
+  const authorInitials = (author.name || "A")
     .split(" ")
     .map((n) => n[0])
     .join("")

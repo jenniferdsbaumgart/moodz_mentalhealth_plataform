@@ -1,15 +1,16 @@
 import * as React from "react"
-import { Card, CardProps } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { CARD_HOVER } from "@/lib/design-tokens"
 
-interface InteractiveCardProps extends CardProps {
+interface InteractiveCardProps extends React.ComponentProps<"div"> {
   /** Estilo de hover */
   hoverStyle?: keyof typeof CARD_HOVER
   /** Se o card é clicável */
   clickable?: boolean
   /** Callback de clique */
   onClick?: () => void
+  children?: React.ReactNode
 }
 
 export function InteractiveCard({
@@ -24,7 +25,7 @@ export function InteractiveCard({
 
   return (
     <Card
-      asChild={!!onClick}
+
       className={cn(
         clickable && CARD_HOVER[hoverStyle],
         className

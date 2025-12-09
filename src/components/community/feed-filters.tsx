@@ -20,8 +20,8 @@ interface FeedFiltersProps {
   onSearchChange: (search: string) => void
   category: PostCategory | "all"
   onCategoryChange: (category: PostCategory | "all") => void
-  sortBy: string
-  onSortByChange: (sortBy: string) => void
+  sortBy: "newest" | "oldest" | "popular" | "mostCommented"
+  onSortByChange: (value: "newest" | "oldest" | "popular" | "mostCommented") => void
   selectedTags: string[]
   onTagsChange: (tags: string[]) => void
   availableTags?: Array<{ id: string; name: string; slug: string }>

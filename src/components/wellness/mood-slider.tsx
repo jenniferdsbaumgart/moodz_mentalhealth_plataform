@@ -5,25 +5,7 @@ import { Slider } from "@/components/ui/slider"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-interface MoodLevel {
-  value: number
-  emoji: string
-  label: string
-  color: string
-}
-
-const MOOD_LEVELS: MoodLevel[] = [
-  { value: 1, emoji: "😢", label: "Muito mal", color: "bg-red-500" },
-  { value: 2, emoji: "😞", label: "Mal", color: "bg-red-400" },
-  { value: 3, emoji: "😕", label: "Desanimado", color: "bg-orange-500" },
-  { value: 4, emoji: "😐", label: "Meh", color: "bg-orange-400" },
-  { value: 5, emoji: "🙂", label: "Ok", color: "bg-yellow-500" },
-  { value: 6, emoji: "😊", label: "Bem", color: "bg-yellow-400" },
-  { value: 7, emoji: "😄", label: "Bom", color: "bg-green-500" },
-  { value: 8, emoji: "😃", label: "Muito bom", color: "bg-green-400" },
-  { value: 9, emoji: "🤗", label: "Ótimo", color: "bg-blue-500" },
-  { value: 10, emoji: "🥳", label: "Incrível", color: "bg-purple-500" },
-]
+import { MOOD_LEVELS } from "@/lib/constants/wellness"
 
 interface MoodSliderProps {
   value: number
@@ -126,11 +108,10 @@ export function MoodSlider({
                 <button
                   key={level}
                   onClick={() => onChange(level)}
-                  className={`p-2 rounded-full transition-all hover:scale-110 ${
-                    value === level
+                  className={`p-2 rounded-full transition-all hover:scale-110 ${value === level
                       ? "ring-2 ring-primary ring-offset-2"
                       : "hover:bg-muted"
-                  }`}
+                    }`}
                   title={mood.label}
                 >
                   <span className="text-xl">{mood.emoji}</span>

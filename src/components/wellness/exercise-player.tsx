@@ -42,6 +42,7 @@ export function ExercisePlayer({
   const [currentStep, setCurrentStep] = useState(0)
   const [breathingPhase, setBreathingPhase] = useState<"inhale" | "hold" | "exhale" | "rest">("rest")
   const [breathingTime, setBreathingTime] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
 
   const categoryLabels = {
     BREATHING: "Respiração",

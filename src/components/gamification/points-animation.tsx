@@ -73,7 +73,7 @@ export function PointsAnimation({
       x: position ? position.x : 0,
       transition: {
         duration: 0.5,
-        ease: "easeOut",
+        ease: "easeOut" as const,
       },
     },
     exit: {
@@ -82,7 +82,7 @@ export function PointsAnimation({
       y: position ? position.y - 150 : -100,
       transition: {
         duration: 0.5,
-        ease: "easeIn",
+        ease: "easeIn" as const,
       },
     },
   })
@@ -92,7 +92,7 @@ export function PointsAnimation({
       x: [0, -2, 2, -2, 2, 0],
       transition: {
         duration: 0.5,
-        ease: "easeInOut",
+        ease: "easeInOut" as const,
       },
     },
   })

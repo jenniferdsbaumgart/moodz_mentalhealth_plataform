@@ -1,8 +1,8 @@
 import * as React from "react"
-import { Button, ButtonProps } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-interface IconButtonProps extends ButtonProps {
+interface IconButtonProps extends React.ComponentProps<typeof Button> {
   /** Descrição obrigatória para acessibilidade */
   label: string
   /** Ícone a ser renderizado */

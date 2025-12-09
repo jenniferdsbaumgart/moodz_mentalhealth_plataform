@@ -19,7 +19,8 @@ export function LevelProgress({
   showDetails = true,
   className
 }: LevelProgressProps) {
-  const actualLevel = currentLevel || calculateLevel(currentPoints)
+  const levelInfo = calculateLevel(currentPoints)
+  const actualLevel = currentLevel || (typeof levelInfo === 'number' ? levelInfo : levelInfo.level)
   const progress = getLevelProgress(currentPoints)
 
   const isMaxLevel = actualLevel >= 10

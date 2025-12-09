@@ -57,7 +57,7 @@ export function CommentList({ postId, postAuthorId, totalComments }: CommentList
       {/* Comments List */}
       {comments.length > 0 ? (
         <div className="space-y-4">
-          {comments.map((comment) => (
+          {comments.map((comment: any) => (
             <CommentItem
               key={comment.id}
               comment={comment}

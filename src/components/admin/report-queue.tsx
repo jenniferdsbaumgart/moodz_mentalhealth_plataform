@@ -94,11 +94,10 @@ export function ReportQueue({ initialStatus = "PENDING" }: ReportQueueProps) {
         {Object.entries(REPORT_STATUS_CONFIG).map(([key, config]) => (
           <div
             key={key}
-            className={`p-4 rounded-lg border ${
-              status === key
+            className={`p-4 rounded-lg border ${status === key
                 ? "border-primary bg-primary/5"
                 : "border-border bg-card"
-            }`}
+              }`}
           >
             <div className="flex items-center gap-2">
               <div
@@ -130,7 +129,7 @@ export function ReportQueue({ initialStatus = "PENDING" }: ReportQueueProps) {
         </div>
       ) : (
         <div className="space-y-4">
-          {reports.map((report) => (
+          {reports.map((report: any) => (
             <ReportCard key={report.id} report={report} />
           ))}
 

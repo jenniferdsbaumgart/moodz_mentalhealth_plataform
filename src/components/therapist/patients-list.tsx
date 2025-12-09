@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { InteractiveCard } from "@/components/ui/interactive-card"
 import { UserAvatar } from "@/components/ui/user-avatar"
 import { Badge } from "@/components/ui/badge"
@@ -38,7 +38,7 @@ export function PatientsList() {
   let filteredPatients = data?.patients?.filter((p: any) => {
     // Filtro de busca
     const matchesSearch = p.name?.toLowerCase().includes(search.toLowerCase()) ||
-                         p.email?.toLowerCase().includes(search.toLowerCase())
+      p.email?.toLowerCase().includes(search.toLowerCase())
 
     if (!matchesSearch) return false
 

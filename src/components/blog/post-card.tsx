@@ -17,7 +17,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, featured = false }: PostCardProps) {
-  const authorInitials = post.author.name
+  const authorInitials = (post.author.name || "A")
     .split(" ")
     .map((n) => n[0])
     .join("")
@@ -53,17 +53,15 @@ export function PostCard({ post, featured = false }: PostCardProps) {
 
         <CardContent className={`p-6 ${featured ? 'space-y-4' : 'space-y-3'}`}>
           {/* Title */}
-          <h3 className={`font-bold leading-tight hover:text-primary transition-colors ${
-            featured ? 'text-2xl' : 'text-lg'
-          }`}>
+          <h3 className={`font-bold leading-tight hover:text-primary transition-colors ${featured ? 'text-2xl' : 'text-lg'
+            }`}>
             {post.title}
           </h3>
 
           {/* Excerpt */}
           {post.excerpt && (
-            <p className={`text-muted-foreground leading-relaxed ${
-              featured ? 'text-base' : 'text-sm'
-            }`}>
+            <p className={`text-muted-foreground leading-relaxed ${featured ? 'text-base' : 'text-sm'
+              }`}>
               {post.excerpt}
             </p>
           )}
@@ -74,19 +72,18 @@ export function PostCard({ post, featured = false }: PostCardProps) {
               <Avatar className="h-8 w-8">
                 <AvatarImage
                   src={post.author.image || ""}
-                  alt={post.author.name}
+                  alt={post.author.name || "Author"}
                 />
                 <AvatarFallback className="text-xs">
                   {authorInitials}
                 </AvatarFallback>
               </Avatar>
               <div className="text-sm">
-                <p className="font-medium text-foreground">
-                  {post.author.name}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  {formatRelativeBlogDate(post.publishedAt)}
-                </p>
+                <span className="text-sm font-medium">{post.author.name}</span>
+                <span className="text-[10px] text-muted-foreground">•</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatBlogDate(post.publishedAt || post.createdAt)}
+                </span>
               </div>
             </div>
 

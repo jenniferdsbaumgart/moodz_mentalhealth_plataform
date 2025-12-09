@@ -43,7 +43,7 @@ export function VoteButtons({
 
     // Optimistic update
     const newVote = optimisticVote === value ? null : value
-    const countDiff = calculateCountDiff(optimisticVote, newVote)
+    const countDiff = calculateCountDiff(optimisticVote ?? null, newVote)
 
     setOptimisticVote(newVote)
     setOptimisticCount(prev => prev + countDiff)
@@ -117,8 +117,8 @@ export function VoteButtons({
         "font-medium text-center px-1",
         compact ? "text-sm min-w-[20px]" : "text-base min-w-[24px]",
         displayCount > 0 ? "text-green-600 dark:text-green-400" :
-        displayCount < 0 ? "text-red-600 dark:text-red-400" :
-        "text-muted-foreground"
+          displayCount < 0 ? "text-red-600 dark:text-red-400" :
+            "text-muted-foreground"
       )}>
         {displayCount}
       </span>

@@ -168,8 +168,8 @@ export function EngagementChart({ data, period }: EngagementChartProps) {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ frequency, percentage }) =>
-                    `${frequency}: ${percentage}%`
+                  label={({ payload }: any) =>
+                    `${payload?.frequency || ""}: ${payload?.percentage || 0}%`
                   }
                   outerRadius={80}
                   fill="#8884d8"

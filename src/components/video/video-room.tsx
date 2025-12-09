@@ -15,6 +15,14 @@ interface VideoRoomProps {
   therapistId?: string
 }
 
+interface ChatMessage {
+  id: string
+  userId: string
+  userName: string
+  content: string
+  timestamp: Date
+}
+
 
 export function VideoRoom({ room, sessionId, onLeave, isTherapist = false, therapistId }: VideoRoomProps) {
   const [participants, setParticipants] = useState<Record<string, any>>({})
@@ -22,6 +30,7 @@ export function VideoRoom({ room, sessionId, onLeave, isTherapist = false, thera
   const [isAudioEnabled, setIsAudioEnabled] = useState(true)
   const [isVideoEnabled, setIsVideoEnabled] = useState(true)
   const [isScreenSharing, setIsScreenSharing] = useState(false)
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
 
   useEffect(() => {
     if (!room) return

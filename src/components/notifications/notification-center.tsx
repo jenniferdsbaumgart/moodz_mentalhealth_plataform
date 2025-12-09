@@ -15,8 +15,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Badge } from "@/components/ui/badge"
-import { formatDistanceToNow } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { formatRelativeTime } from "@/lib/utils/date"
 import { cn } from "@/lib/utils"
 
 interface Notification {
@@ -127,11 +126,8 @@ export function NotificationCenter() {
                                     <p className="text-xs text-muted-foreground line-clamp-2">
                                         {notification.message}
                                     </p>
-                                    <span className="text-[10px] text-muted-foreground mt-1">
-                                        {formatDistanceToNow(new Date(notification.createdAt), {
-                                            addSuffix: true,
-                                            locale: ptBR
-                                        })}
+                                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                        {formatRelativeTime(notification.createdAt)}
                                     </span>
                                 </DropdownMenuItem>
                             ))}

@@ -6,36 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { X, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface Emotion {
-  id: string
-  label: string
-  emoji?: string
-  category: "positive" | "negative" | "neutral"
-  color: string
-}
-
-const PREDEFINED_EMOTIONS: Emotion[] = [
-  // Positivas
-  { id: "feliz", label: "Feliz", emoji: "😊", category: "positive", color: "bg-green-100 text-green-800 border-green-200" },
-  { id: "calmo", label: "Calmo", emoji: "😌", category: "positive", color: "bg-blue-100 text-blue-800 border-blue-200" },
-  { id: "grato", label: "Grato", emoji: "🙏", category: "positive", color: "bg-purple-100 text-purple-800 border-purple-200" },
-  { id: "animado", label: "Animado", emoji: "🤩", category: "positive", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
-  { id: "amado", label: "Amado", emoji: "❤️", category: "positive", color: "bg-pink-100 text-pink-800 border-pink-200" },
-  { id: "confiante", label: "Confiante", emoji: "💪", category: "positive", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
-
-  // Negativas
-  { id: "triste", label: "Triste", emoji: "😢", category: "negative", color: "bg-red-100 text-red-800 border-red-200" },
-  { id: "ansioso", label: "Ansioso", emoji: "😰", category: "negative", color: "bg-orange-100 text-orange-800 border-orange-200" },
-  { id: "irritado", label: "Irritado", emoji: "😠", category: "negative", color: "bg-red-200 text-red-900 border-red-300" },
-  { id: "estressado", label: "Estressado", emoji: "😫", category: "negative", color: "bg-orange-200 text-orange-900 border-orange-300" },
-  { id: "solitario", label: "Solitário", emoji: "😔", category: "negative", color: "bg-gray-100 text-gray-800 border-gray-200" },
-  { id: "cansado", label: "Cansado", emoji: "😴", category: "negative", color: "bg-blue-100 text-blue-900 border-blue-300" },
-
-  // Neutras
-  { id: "neutro", label: "Neutro", emoji: "😐", category: "neutral", color: "bg-gray-100 text-gray-700 border-gray-200" },
-  { id: "pensativo", label: "Pensativo", emoji: "🤔", category: "neutral", color: "bg-blue-50 text-blue-700 border-blue-200" },
-  { id: "curioso", label: "Curioso", emoji: "👀", category: "neutral", color: "bg-purple-50 text-purple-700 border-purple-200" },
-]
+import { PREDEFINED_EMOTIONS } from "@/lib/constants/wellness"
 
 interface EmotionPickerProps {
   selectedEmotions: string[]
@@ -75,13 +46,26 @@ export function EmotionPicker({
     onChange(selectedEmotions.filter(id => id !== emotionId))
   }
 
-  const groupedEmotions = showCategories ? {
-    positive: PREDEFINED_EMOTIONS.filter(e => e.category === "positive"),
-    negative: PREDEFINED_EMOTIONS.filter(e => e.category === "negative"),
-    neutral: PREDEFINED_EMOTIONS.filter(e => e.category === "neutral"),
-  } : {
-    all: PREDEFINED_EMOTIONS
+  const getGroupedEmotions = () => {
+    if (showCategories) {
+      return {
+        type: 'categories' as const,
+        data: {
+          positive: PREDEFINED_EMOTIONS.filter(e => e.category === "positive"),
+          negative: PREDEFINED_EMOTIONS.filter(e => e.category === "negative"),
+          neutral: PREDEFINED_EMOTIONS.filter(e => e.category === "neutral"),
+        }
+      }
+    }
+    return {
+      type: 'all' as const,
+      data: {
+        all: PREDEFINED_EMOTIONS
+      }
+    }
   }
+
+  const groupedEmotions = getGroupedEmotions()
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -123,12 +107,12 @@ export function EmotionPicker({
 
       {/* Predefined Emotions */}
       <div className="space-y-4">
-        {showCategories ? (
+        {groupedEmotions.type === 'categories' ? (
           <>
             <div>
               <h4 className="text-sm font-medium mb-3 text-green-700">Emoções Positivas</h4>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                {groupedEmotions.positive.map((emotion) => (
+                {groupedEmotions.data.positive.map((emotion) => (
                   <Button
                     key={emotion.id}
                     variant={selectedEmotions.includes(emotion.id) ? "default" : "outline"}
@@ -150,7 +134,7 @@ export function EmotionPicker({
             <div>
               <h4 className="text-sm font-medium mb-3 text-red-700">Emoções Negativas</h4>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                {groupedEmotions.negative.map((emotion) => (
+                {groupedEmotions.data.negative.map((emotion) => (
                   <Button
                     key={emotion.id}
                     variant={selectedEmotions.includes(emotion.id) ? "default" : "outline"}
@@ -172,7 +156,7 @@ export function EmotionPicker({
             <div>
               <h4 className="text-sm font-medium mb-3 text-gray-700">Emoções Neutras</h4>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                {groupedEmotions.neutral.map((emotion) => (
+                {groupedEmotions.data.neutral.map((emotion) => (
                   <Button
                     key={emotion.id}
                     variant={selectedEmotions.includes(emotion.id) ? "default" : "outline"}
@@ -195,7 +179,7 @@ export function EmotionPicker({
           <div>
             <h4 className="text-sm font-medium mb-3">Escolha suas emoções</h4>
             <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-              {groupedEmotions.all.map((emotion) => (
+              {groupedEmotions.data.all.map((emotion) => (
                 <Button
                   key={emotion.id}
                   variant={selectedEmotions.includes(emotion.id) ? "default" : "outline"}

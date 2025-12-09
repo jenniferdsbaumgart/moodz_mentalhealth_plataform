@@ -13,7 +13,7 @@ interface CategoryTabsProps {
 
 export function CategoryTabs({ value, onValueChange, counts }: CategoryTabsProps) {
   return (
-    <Tabs value={value} onValueChange={onValueChange}>
+    <Tabs value={value} onValueChange={(val) => onValueChange(val as PostCategory | "all")}>
       <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 h-auto p-1">
         <TabsTrigger
           value="all"

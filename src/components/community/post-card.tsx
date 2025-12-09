@@ -14,8 +14,7 @@ import {
   User
 } from "lucide-react"
 import { POST_CATEGORIES } from "@/lib/constants/community"
-import { formatDistanceToNow } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { formatRelativeTime } from "@/lib/utils/date"
 
 interface PostCardProps {
   post: PostWithDetails
@@ -26,10 +25,7 @@ interface PostCardProps {
 export function PostCard({ post, onVote, isCompact = false }: PostCardProps) {
   const categoryInfo = POST_CATEGORIES[post.category]
   const authorDisplay = post.isAnonymous ? "Anônimo" : (post.author.name || "Usuário")
-  const timeAgo = formatDistanceToNow(new Date(post.createdAt), {
-    addSuffix: true,
-    locale: ptBR
-  })
+  const timeAgo = formatRelativeTime(post.createdAt)
 
   const excerpt = post.excerpt || post.content.substring(0, 150) + (post.content.length > 150 ? "..." : "")
 

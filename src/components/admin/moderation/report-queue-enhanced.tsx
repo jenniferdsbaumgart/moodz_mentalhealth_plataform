@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-interface Report {
+export interface Report {
   id: string
   contentType: "POST" | "COMMENT"
   contentId: string
@@ -42,12 +42,14 @@ interface Report {
     image: string | null
   }
   content?: {
+    id: string
     title?: string
     content?: string
     author?: {
       id: string
       name: string | null
       image: string | null
+      email: string
     }
   }
 }
@@ -107,7 +109,7 @@ export function ReportQueueEnhanced({ onSelectReport, selectedReportId }: Report
       params.set("limit", "20")
       if (statusFilter !== "all") params.set("status", statusFilter)
       if (reasonFilter !== "all") params.set("reason", reasonFilter)
-      
+
       const response = await fetch(`/api/admin/reports?${params}`)
       if (!response.ok) throw new Error("Failed to fetch reports")
       return response.json()
@@ -195,9 +197,8 @@ export function ReportQueueEnhanced({ onSelectReport, selectedReportId }: Report
               {sortedReports.map((report: Report) => (
                 <div
                   key={report.id}
-                  className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                    selectedReportId === report.id ? "bg-muted" : ""
-                  }`}
+                  className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${selectedReportId === report.id ? "bg-muted" : ""
+                    }`}
                   onClick={() => onSelectReport(report)}
                 >
                   <div className="flex items-start gap-3">

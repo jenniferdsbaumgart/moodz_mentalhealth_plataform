@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { User, Profile } from "@prisma/client"
+import { User } from "@prisma/client"
 import {
   Table,
   TableBody,
@@ -35,7 +35,7 @@ import { ptBR } from "date-fns/locale"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
-type AdminWithProfile = User & { profile: Profile | null }
+type AdminWithProfile = User & { profile: any }
 
 interface AdminsTableProps {
   admins: AdminWithProfile[]

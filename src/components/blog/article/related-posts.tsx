@@ -73,7 +73,7 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
 
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>{post.author.name}</span>
-                  <span>{formatRelativeBlogDate(post.publishedAt)}</span>
+                  <span>{formatRelativeBlogDate(post.publishedAt || post.createdAt)}</span>
                 </div>
 
                 {post.readingTime && (

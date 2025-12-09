@@ -141,7 +141,7 @@ export function PatientTags({ patientId }: PatientTagsProps) {
     })
   }
 
-  const handleAddSuggestedTag = (tag: typeof SUGGESTED_TAGS[string][number]) => {
+  const handleAddSuggestedTag = (tag: typeof SUGGESTED_TAGS[keyof typeof SUGGESTED_TAGS][number]) => {
     addTagMutation.mutate({
       name: tag.name,
       color: tag.color,
@@ -252,9 +252,8 @@ export function PatientTags({ patientId }: PatientTagsProps) {
                 <button
                   key={color}
                   type="button"
-                  className={`w-8 h-8 rounded-full border-2 ${color} ${
-                    selectedColor === color ? "border-gray-800" : "border-gray-300"
-                  }`}
+                  className={`w-8 h-8 rounded-full border-2 ${color} ${selectedColor === color ? "border-gray-800" : "border-gray-300"
+                    }`}
                   onClick={() => setSelectedColor(color)}
                 />
               ))}

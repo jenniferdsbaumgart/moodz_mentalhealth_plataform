@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -101,9 +101,16 @@ export function BadgeUnlockModal({
   const sparklePositions = useMemo(() => generateSparklePositions(15), [])
   const confettiPieces = useMemo(() => generateConfettiPieces(30), [])
 
-  // Reset badge index and show confetti when modal opens
-  const currentBadgeIndex = isOpen && badges.length > 0 ? 0 : 0
+  // Reset badge index when modal opens
+  const [currentBadgeIndex, setCurrentBadgeIndex] = useState(0)
   const showConfetti = isOpen && badges.length > 0
+
+  // Reset index when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentBadgeIndex(0)
+    }
+  }, [isOpen])
 
   const handleContinue = () => {
     if (currentBadgeIndex < badges.length - 1) {
@@ -309,7 +316,7 @@ export function BadgeUnlockModal({
                 className={cn(
                   "absolute w-1 h-6 rounded-full",
                   ["bg-yellow-400", "bg-pink-400", "bg-purple-400", "bg-blue-400", "bg-green-400", "bg-orange-400"][
-                    piece.colorIndex
+                  piece.colorIndex
                   ]
                 )}
                 initial={{

@@ -158,8 +158,8 @@ export function SessionsBreakdown({ data, period }: SessionsBreakdownProps) {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ status, percentage }) =>
-                    `${status}: ${percentage}%`
+                  label={({ payload }: any) =>
+                    `${payload?.status || ""}: ${payload?.percentage || 0}%`
                   }
                   outerRadius={80}
                   fill="#8884d8"
@@ -242,7 +242,7 @@ export function SessionsBreakdown({ data, period }: SessionsBreakdownProps) {
                   formatter={(value: number, name) => [
                     `${value} min`,
                     name === "averageDuration" ? "Média" :
-                    name === "minDuration" ? "Mínima" : "Máxima"
+                      name === "minDuration" ? "Mínima" : "Máxima"
                   ]}
                 />
                 <Line
@@ -315,22 +315,20 @@ export function SessionsBreakdown({ data, period }: SessionsBreakdownProps) {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div className={`p-4 rounded-lg ${
-              sessionStats.attendanceRate >= 80 ? 'bg-green-50' :
-              sessionStats.attendanceRate >= 60 ? 'bg-yellow-50' : 'bg-red-50'
-            }`}>
+            <div className={`p-4 rounded-lg ${sessionStats.attendanceRate >= 80 ? 'bg-green-50' :
+                sessionStats.attendanceRate >= 60 ? 'bg-yellow-50' : 'bg-red-50'
+              }`}>
               <h4 className="font-medium mb-2">Comparecimento</h4>
               <p className="text-sm">
                 {sessionStats.attendanceRate >= 80 ? 'Excelente' :
-                 sessionStats.attendanceRate >= 60 ? 'Bom' : 'Precisa melhorar'} -{" "}
+                  sessionStats.attendanceRate >= 60 ? 'Bom' : 'Precisa melhorar'} -{" "}
                 {sessionStats.attendanceRate}% dos pacientes comparecem
               </p>
             </div>
 
-            <div className={`p-4 rounded-lg ${
-              sessionStats.noShowRate <= 10 ? 'bg-green-50' :
-              sessionStats.noShowRate <= 20 ? 'bg-yellow-50' : 'bg-red-50'
-            }`}>
+            <div className={`p-4 rounded-lg ${sessionStats.noShowRate <= 10 ? 'bg-green-50' :
+                sessionStats.noShowRate <= 20 ? 'bg-yellow-50' : 'bg-red-50'
+              }`}>
               <h4 className="font-medium mb-2">Taxa de Faltas</h4>
               <p className="text-sm">
                 {sessionStats.noShowRate}% dos agendamentos resultam em faltas não justificadas

@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { formatDistanceToNow } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { formatRelativeTime } from "@/lib/utils/date"
 import {
   Check,
   X,
@@ -206,10 +205,9 @@ export function NotificationItem({
 
         <div className="flex items-center gap-1 shrink-0">
           <span className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(notification.createdAt), {
-              addSuffix: true,
-              locale: ptBR
-            })}
+            <span className="text-xs text-muted-foreground">
+              {formatRelativeTime(notification.createdAt)}
+            </span>
           </span>
 
           {isHovered && (showMarkAsRead || showDelete) && (
@@ -276,10 +274,7 @@ export function NotificationItem({
               {notification.message}
             </p>
             <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(notification.createdAt), {
-                addSuffix: true,
-                locale: ptBR
-              })}
+              {formatRelativeTime(notification.createdAt)}
             </span>
           </div>
 

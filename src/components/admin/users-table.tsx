@@ -120,11 +120,11 @@ export function UsersTable() {
                 </div>
               </TableCell>
               <TableCell>
-                <Badge variant="outline">{roleLabels[user.role]}</Badge>
+                <Badge variant="outline">{roleLabels[user.role as keyof typeof roleLabels]}</Badge>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <div className={`h-2 w-2 rounded-full ${statusColors[user.status]}`} />
+                  <div className={`h-2 w-2 rounded-full ${statusColors[user.status as keyof typeof statusColors]}`} />
                   {user.status}
                 </div>
               </TableCell>
